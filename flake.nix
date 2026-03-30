@@ -15,14 +15,12 @@
       inherit (nixpkgs.lib) genAttrs;
       inherit (builtins) filter hasAttr;
 
-      supportedSystems = filter (system: hasAttr system leetgpuUrls) nixpkgs.lib.systems.flakeExposed;
-
-      leetgpuUrls = {
-        "x86_64-linux" = true;
-        "aarch64-linux" = true;
-        "x86_64-darwin" = true;
-        "aarch64-darwin" = true;
-      };
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
     in {
       packages = genAttrs supportedSystems (system:
         let
@@ -32,10 +30,20 @@
           };
         in {
           leetgpu_cli = pkgs.callPackage ./pkgs/leetgpu-cli { };
+          pi = pkgs.callPackage ./pkgs/pi { };
           default = self.packages.${system}.leetgpu_cli;
         }
       );
 
-      homeManagerModules.default = import ./modules/leetgpu.nix;
+      homeManagerModules = {
+        leetgpu = import ./modules/leetgpu.nix;
+        pi = import ./modules/pi.nix;
+        default = {
+          imports = [
+            self.homeManagerModules.leetgpu
+            self.homeManagerModules.pi
+          ];
+        };
+      };
     };
 }
