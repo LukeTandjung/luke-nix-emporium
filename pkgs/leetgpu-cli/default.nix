@@ -6,7 +6,7 @@
 }:
 
 let
-  version = "v1.0.0";
+  version = "1.1.1";
   binaries = builtins.fromJSON (builtins.readFile ./urls.json);
   hashes = builtins.fromJSON (builtins.readFile ./hashes.json);
 in
