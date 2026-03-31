@@ -7,6 +7,7 @@ A personal collection of Nix flake packages for software not yet available in ni
 | Package | Description |
 |---------|-------------|
 | [LeetGPU CLI](docs/LEETGPU.md) | CLI tool for [LeetGPU](https://leetgpu.com), a platform for GPU programming challenges |
+| [pi](docs/PI.md) | A terminal-based coding agent with multi-model support |
 
 ## Usage
 
@@ -16,19 +17,57 @@ Add this flake to your inputs:
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    luke-pkgs.url = "github:LukeTandjung/leetgpu_cli_nix";
+    luke-pkgs.url = "github:LukeTandjung/luke-nix-emporium";
   };
 }
 ```
 
-Then use any package:
+### Standalone packages
 
 ```nix
 { inputs, pkgs, ... }:
 {
   home.packages = [
     inputs.luke-pkgs.packages.${pkgs.system}.leetgpu_cli
+    inputs.luke-pkgs.packages.${pkgs.system}.pi
   ];
+}
+```
+
+### Home Manager modules
+
+Import all modules at once:
+
+```nix
+{
+  imports = [ inputs.luke-pkgs.homeManagerModules.default ];
+
+  programs.leetgpu.enable = true;
+
+  programs.pi = {
+    enable = true;
+    settings = {
+      defaultProvider = "anthropic";
+      defaultModel = "claude-sonnet-4-20250514";
+    };
+  };
+}
+```
+
+Or import individually:
+
+```nix
+{
+  imports = [ inputs.luke-pkgs.homeManagerModules.pi ];
+
+  programs.pi = {
+    enable = true;
+    settings = { /* ... */ };
+    skills.my-skill = ''
+      # My Skill
+      Description of what this skill does.
+    '';
+  };
 }
 ```
 
