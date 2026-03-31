@@ -7,25 +7,15 @@
 
 let
   version = "v1.0.0";
-  urls = {
-    "x86_64-linux" = "https://cli.leetgpu.com/dist/${version}/leetgpu-linux-amd64";
-    "aarch64-linux" = "https://cli.leetgpu.com/dist/${version}/leetgpu-linux-arm64";
-    "x86_64-darwin" = "https://cli.leetgpu.com/dist/${version}/leetgpu-macos-amd64";
-    "aarch64-darwin" = "https://cli.leetgpu.com/dist/${version}/leetgpu-macos-arm64";
-  };
-  hashes = {
-    "x86_64-linux" = "sha256-GlJzzXkHTrW7Yg4nC1tD1hAlj4YMeveG7DibKu5UDxM=";
-    "aarch64-linux" = "sha256-PA6u/xecC0FWQKECH+GwZJrRTr382RG+tWhLm08IlW0=";
-    "x86_64-darwin" = "sha256-HMP042zVK3DmVxHsPx/sgZr+0k5mFcJD6XiihLqN7wg=";
-    "aarch64-darwin" = "sha256-jEiSHDsLopiYmdsXx36SJKxv1xEI2PRRI6H7ienCskU=";
-  };
+  binaries = builtins.fromJSON (builtins.readFile ./urls.json);
+  hashes = builtins.fromJSON (builtins.readFile ./hashes.json);
 in
 stdenv.mkDerivation {
   inherit version;
 
   pname = "leetgpu_cli";
   src = fetchurl {
-    url = urls.${stdenv.hostPlatform.system} or (throw "Unsupported system: ${stdenv.hostPlatform.system}");
+    url = "https://cli.leetgpu.com/dist/${version}/${binaries.${stdenv.hostPlatform.system} or (throw "Unsupported system: ${stdenv.hostPlatform.system}")}";
     sha256 = hashes.${stdenv.hostPlatform.system} or (throw "Unsupported system: ${stdenv.hostPlatform.system}");
   };
   dontUnpack = true;

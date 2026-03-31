@@ -1,0 +1,6 @@
+{
+  "x86_64-linux": "sha256-GlJzzXkHTrW7Yg4nC1tD1hAlj4YMeveG7DibKu5UDxM=",
+  "aarch64-linux": "sha256-PA6u/xecC0FWQKECH+GwZJrRTr382RG+tWhLm08IlW0=",
+  "x86_64-darwin": "sha256-HMP042zVK3DmVxHsPx/sgZr+0k5mFcJD6XiihLqN7wg=",
+  "aarch64-darwin": "sha256-jEiSHDsLopiYmdsXx36SJKxv1xEI2PRRI6H7ienCskU="
+}

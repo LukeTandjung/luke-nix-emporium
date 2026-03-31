@@ -1,0 +1,6 @@
+{
+  "x86_64-linux": "leetgpu-linux-amd64",
+  "aarch64-linux": "leetgpu-linux-arm64",
+  "x86_64-darwin": "leetgpu-macos-amd64",
+  "aarch64-darwin": "leetgpu-macos-arm64"
+}
