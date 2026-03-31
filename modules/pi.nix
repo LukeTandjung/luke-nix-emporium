@@ -4,6 +4,23 @@ let
   cfg = config.programs.pi;
   jsonFormat = pkgs.formats.json { };
   pathOrLines = lib.types.either lib.types.path lib.types.lines;
+
+  skillsDir = ../pkgs/pi/skills;
+  promptsDir = ../pkgs/pi/prompts;
+  extensionsDir = ../pkgs/pi/extensions;
+  contextDir = ../pkgs/pi/context;
+
+  defaultSkills = lib.mapAttrs
+    (name: _: skillsDir + "/${name}/SKILL.md")
+    (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
+
+  defaultPrompts = lib.mapAttrs
+    (name: _: promptsDir + "/${name}/PROMPT.md")
+    (lib.filterAttrs (_: type: type == "directory") (builtins.readDir promptsDir));
+
+  defaultExtensions = lib.mapAttrs
+    (name: _: extensionsDir + "/${name}")
+    (lib.filterAttrs (_: type: type == "regular") (builtins.readDir extensionsDir));
 in
 {
   options.programs.pi = {
@@ -43,7 +60,7 @@ in
 
     skills = lib.mkOption {
       type = lib.types.attrsOf pathOrLines;
-      default = { };
+      default = defaultSkills;
       description = ''
         Skills to install. Each key is a skill name, and the value is either
         a path to a SKILL.md file or its content as a multi-line string.
@@ -62,7 +79,7 @@ in
 
     prompts = lib.mkOption {
       type = lib.types.attrsOf pathOrLines;
-      default = { };
+      default = defaultPrompts;
       description = ''
         Prompt templates to install. Each key is a prompt name, and the value
         is either a path to a PROMPT.md file or its content as a multi-line string.
@@ -80,7 +97,7 @@ in
 
     extensions = lib.mkOption {
       type = lib.types.attrsOf lib.types.path;
-      default = { };
+      default = defaultExtensions;
       description = ''
         Extensions to install. Each key is an extension name, and the value
         is a path to the extension file (.ts).
@@ -96,7 +113,7 @@ in
     context = {
       agents = lib.mkOption {
         type = lib.types.nullOr lib.types.lines;
-        default = null;
+        default = builtins.readFile (contextDir + "/AGENTS.md");
         description = ''
           Content for {file}`~/.pi/agent/AGENTS.md`.
           Project-level instructions for the agent.
