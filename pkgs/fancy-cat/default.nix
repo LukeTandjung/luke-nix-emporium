@@ -16,7 +16,7 @@ stdenv.mkDerivation {
     description = "PDF reader for terminal emulators using the Kitty image protocol";
     homepage = "https://github.com/freref/fancy-cat";
     mainProgram = "fancy-cat";
-    platform = zig.meta.platform;
+    platforms = zig.meta.platforms;
     license = lib.licenses.agpl3Only;
   };
   src = fetchFromGitHub {

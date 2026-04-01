@@ -6,15 +6,15 @@ linkFarm "zig-packages" [
   {
     name = "fastb64z-1.0.0-x5LyQZ2gAAAYQrdQBKuqfNOY0beaxhunrksEtUOmIjhq";
     path = fetchzip {
-      url = "https://codeload.github.com/freref/fastb64z/tar.gz/3defc5d33162670c28e42af073cf9bc003017da6";
+      url = "https://github.com/freref/fastb64z/archive/3defc5d33162670c28e42af073cf9bc003017da6.tar.gz";
       hash = "sha256-QaYkoKL2VzY/KKI1HfLuPf6RK54WqkBxkw5+Jc+WRkM=";
     };
   }
   {
-    name = "fzwatch-0.2.2-6qM2ONQzAACLaMFX3DGopE-Y6etVZNn8kDh_4LhmWAMp";
+    name = "fzwatch-0.2.2-6qM2OKsxAACglM0hQhABi_wAJoz6jqXvQunk1yV_xAIO";
     path = fetchzip {
-      url = "https://codeload.github.com/freref/fzwatch/tar.gz/eab2fde9ab2a8fd721d4af67e78308fb6b522a16";
-      hash = "sha256-PTBQGsmdlhsYWbvfrSBoxElWCTdA1bCeYeDywDOdGDA=";
+      url = "https://github.com/freref/fzwatch/archive/cb462430687059e09c638cccf1cadfebeaef018a.tar.gz";
+      hash = "sha256-sNjNoFI7t6dcOxSVsLWEiF6D7f/hMz3JYF9aqLLapxc=";
     };
   }
   {
@@ -26,16 +26,23 @@ linkFarm "zig-packages" [
     };
   }
   {
-    name = "vaxis-0.5.1-BWNV_LosCQAGmCCNOLljCIw6j6-yt53tji6n6rwJ2BhS";
+    name = "vaxis-0.5.1-BWNV_PsXCQBfK1HPvsVxbPLRcxr7YmAwQ_xJhzX9HxFn";
     path = fetchzip {
-      url = "https://codeload.github.com/rockorager/libvaxis/tar.gz/7dbb9fd3122e4ffad262dd7c151d80d863b68558";
-      hash = "sha256-zTyrZrIffM+GJIt973tKDeWHmOCwbn7KLDdQxSiK00Y=";
+      url = "https://github.com/rockorager/libvaxis/archive/f6be46dbda3633dcfe20beb0d62e7f18f5ab7121.tar.gz";
+      hash = "sha256-MRXBNa8M+deRgh/NmC8tFWCDmI+tP9JuvsZUjL2NTKA=";
+    };
+  }
+  {
+    name = "zg-0.15.1-oGqU3M0-tALZCy7boQS86znlBloyKx6--JriGlY0Paa9";
+    path = fetchzip {
+      url = "https://codeberg.org/chaten/zg/archive/749197a3f9d25e211615960c02380a3d659b20f9.tar.gz";
+      hash = "sha256-wzGMfN9Qa3bQRK50p12pdxsSBEVtp2K0gFQFJm7wYMo=";
     };
   }
   {
     name = "zigimg-0.1.0-8_eo2vHnEwCIVW34Q14Ec-xUlzIoVg86-7FU2ypPtxms";
     path = fetchzip {
-      url = "https://codeload.github.com/ivanstepanovftw/zigimg/tar.gz/d7b7ab0ba0899643831ef042bd73289510b39906";
+      url = "https://github.com/ivanstepanovftw/zigimg/archive/d7b7ab0ba0899643831ef042bd73289510b39906.tar.gz";
       hash = "sha256-vkcTloGX+vRw7e6GYJLO9eocYaEOYjXYE0dT7jscZ4A=";
     };
   }
