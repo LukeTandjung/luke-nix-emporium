@@ -29,8 +29,11 @@ stdenv.mkDerivation {
   nativeBuildInputs = [
     zig.hook
   ];
+  dontSetZigDefaultFlags = true;
   zigBuildFlags = [
     "--system"
     (callPackage ./build.zig.zon.nix { })
+    "-Doptimize=ReleaseFast"
+    "-Dcpu=baseline"
   ];
 }
