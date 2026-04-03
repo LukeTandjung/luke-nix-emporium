@@ -8,7 +8,6 @@ A personal collection of Nix flake packages for software not yet available in ni
 |---------|-------------|
 | [LeetGPU CLI](docs/LEETGPU.md) | CLI tool for [LeetGPU](https://leetgpu.com), a platform for GPU programming challenges |
 | [pi](docs/PI.md) | A terminal-based coding agent with multi-model support |
-| [fancy-cat](docs/fancy-cat.md) | Terminal PDF viewer using the Kitty image protocol |
 
 ## Usage
 
@@ -31,7 +30,6 @@ Add this flake to your inputs:
   home.packages = [
     inputs.luke-pkgs.packages.${pkgs.system}.leetgpu_cli
     inputs.luke-pkgs.packages.${pkgs.system}.pi
-    inputs.luke-pkgs.packages.${pkgs.system}.fancy-cat
   ];
 }
 ```

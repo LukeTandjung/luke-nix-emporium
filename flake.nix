@@ -31,20 +31,18 @@
           };
         in
         {
-          fancy_cat = pkgs.callPackage ./pkgs/fancy-cat { };
           leetgpu_cli = pkgs.callPackage ./pkgs/leetgpu-cli { };
           pi = pkgs.callPackage ./pkgs/pi { };
+          terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
           default = self.packages.${system}.leetgpu_cli;
         }
       );
 
       homeManagerModules = {
-        fancy-cat = import ./modules/fancy-cat.nix;
         leetgpu = import ./modules/leetgpu.nix;
         pi = import ./modules/pi.nix;
         default = {
           imports = [
-            self.homeManagerModules.fancy-cat
             self.homeManagerModules.leetgpu
             self.homeManagerModules.pi
           ];
