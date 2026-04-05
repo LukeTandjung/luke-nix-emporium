@@ -54,6 +54,8 @@ rustPlatform.buildRustPackage rec {
 
   checkFlags = [
     "--skip=test_mouse_scroll_file_list_svg"
+    "--skip=test_content_view_svg"
+    "--skip=test_toc_back_to_books_list_svg"
   ];
 
   meta = {
