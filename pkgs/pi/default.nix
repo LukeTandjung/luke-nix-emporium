@@ -45,8 +45,8 @@ buildNpmPackage {
 
   meta = {
     description = "A terminal-based coding agent with multi-model support";
-    homepage = "https://github.com/badlogic/pi-mono";
-    changelog = "https://github.com/badlogic/pi-mono/releases";
+    homepage = "https://github.com/LukeTandjung/pi-mono";
+    changelog = "https://github.com/LukeTandjung/pi-mono/releases";
     license = lib.licenses.mit;
     sourceProvenance = with lib.sourceTypes; [ binaryBytecode ];
     platforms = lib.platforms.all;

@@ -37,7 +37,7 @@ in
       default = { };
       description = ''
         Configuration written to {file}`~/.pi/agent/settings.json`.
-        See https://github.com/badlogic/pi-mono for available options.
+        See https://github.com/LukeTandjung/pi-mono for available options.
       '';
       example = lib.literalExpression ''
         {

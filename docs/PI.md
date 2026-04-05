@@ -1,6 +1,6 @@
 # Pi Coding Agent Nix Flake
 
-A Nix flake for installing [pi](https://github.com/badlogic/pi-mono), a terminal-based coding agent with multi-model support.
+A Nix flake for installing [pi](https://github.com/LukeTandjung/pi-mono), a terminal-based coding agent with multi-model support.
 
 ## Features
 
@@ -95,7 +95,7 @@ The pi package to use.
 
 Type: `attrs` | Default: `{ }`
 
-Configuration written to `~/.pi/agent/settings.json`. See [pi-mono](https://github.com/badlogic/pi-mono) for available options.
+Configuration written to `~/.pi/agent/settings.json`. See [pi-mono](https://github.com/LukeTandjung/pi-mono) for available options.
 
 ```nix
 settings = {
@@ -178,4 +178,4 @@ Content for `~/.pi/agent/APPEND_SYSTEM.md`. Appended to the default system promp
 
 ## License
 
-Pi is licensed under the MIT License. See [pi-mono](https://github.com/badlogic/pi-mono) for details.
+Pi is licensed under the MIT License. See [pi-mono](https://github.com/LukeTandjung/pi-mono) for details.
