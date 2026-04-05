@@ -6,6 +6,7 @@ A personal collection of Nix flake packages for software not yet available in ni
 
 | Package | Description |
 |---------|-------------|
+| bookokrat | Terminal EPUB/PDF/DJVU reader with Vim-style workflows |
 | [LeetGPU CLI](docs/LEETGPU.md) | CLI tool for [LeetGPU](https://leetgpu.com), a platform for GPU programming challenges |
 | [pi](docs/PI.md) | A terminal-based coding agent with multi-model support |
 | terminal-grotesque | Terminal Grotesque typeface by Raphaël Bastide |
@@ -29,6 +30,7 @@ Add this flake to your inputs:
 { inputs, pkgs, ... }:
 {
   home.packages = [
+    inputs.luke-pkgs.packages.${pkgs.system}.bookokrat
     inputs.luke-pkgs.packages.${pkgs.system}.leetgpu_cli
     inputs.luke-pkgs.packages.${pkgs.system}.pi
     inputs.luke-pkgs.packages.${pkgs.system}.terminal_grotesque
@@ -44,6 +46,7 @@ Import all modules at once:
 {
   imports = [ inputs.luke-pkgs.homeManagerModules.default ];
 
+  programs.bookokrat.enable = true;
   programs.leetgpu.enable = true;
 
   programs.pi = {
@@ -59,6 +62,12 @@ Import all modules at once:
 Or import individually:
 
 ```nix
+{
+  imports = [ inputs.luke-pkgs.homeManagerModules.bookokrat ];
+
+  programs.bookokrat.enable = true;
+}
+
 {
   imports = [ inputs.luke-pkgs.homeManagerModules.pi ];
 

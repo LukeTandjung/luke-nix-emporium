@@ -31,6 +31,7 @@
           };
         in
         {
+          bookokrat = pkgs.callPackage ./pkgs/bookokrat { };
           leetgpu_cli = pkgs.callPackage ./pkgs/leetgpu-cli { };
           pi = pkgs.callPackage ./pkgs/pi { };
           terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
@@ -39,10 +40,12 @@
       );
 
       homeManagerModules = {
+        bookokrat = import ./modules/bookokrat.nix;
         leetgpu = import ./modules/leetgpu.nix;
         pi = import ./modules/pi.nix;
         default = {
           imports = [
+            self.homeManagerModules.bookokrat
             self.homeManagerModules.leetgpu
             self.homeManagerModules.pi
           ];
