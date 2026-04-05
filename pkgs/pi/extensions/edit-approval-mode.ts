@@ -239,8 +239,7 @@ function getDiffStats(diffText: string): DiffStats {
 function buildEditPreview(
 	cwd: string,
 	path: string,
-	oldText: string,
-	newText: string,
+	edits: Array<{ oldText: string; newText: string }>,
 ): Result<ApprovalPreview, Error> {
 	const { absolutePath, displayPath } = resolveRequestedPath(cwd, path);
 	const currentFileContents = readTextIfExists(absolutePath);
@@ -248,26 +247,26 @@ function buildEditPreview(
 		return currentFileContents;
 	}
 
-	let beforeContent = oldText;
-	let afterContent = newText;
-	let note: string | undefined;
+	const notes: Array<string> = [];
+	let workingContent = typeof currentFileContents === "string" ? currentFileContents : undefined;
 
-	if (typeof currentFileContents === "string") {
-		const occurrenceCount = countOccurrences(currentFileContents, oldText);
-
-		if (occurrenceCount === 1) {
-			beforeContent = currentFileContents;
-			afterContent = replaceFirstOccurrence(currentFileContents, oldText, newText);
-		} else if (occurrenceCount === 0) {
-			note =
-				"Preview is based on the requested replacement snippet because the current file does not contain oldText exactly. The edit tool may still fail.";
+	for (const { oldText, newText } of edits) {
+		if (typeof workingContent === "string") {
+			const occurrenceCount = countOccurrences(workingContent, oldText);
+			if (occurrenceCount === 1) {
+				workingContent = replaceFirstOccurrence(workingContent, oldText, newText);
+			} else if (occurrenceCount === 0) {
+				notes.push("Preview may be inaccurate: the current file does not contain oldText exactly. The edit tool may still fail.");
+			} else {
+				notes.push(`Preview may be inaccurate: oldText appears ${occurrenceCount} times in the current file.`);
+			}
 		} else {
-			note = `Preview is based on the requested replacement snippet because oldText appears ${occurrenceCount} times in the current file.`;
+			notes.push("Preview is based on the requested replacement snippet because the target file does not exist yet. The edit tool may still fail.");
 		}
-	} else {
-		note =
-			"Preview is based on the requested replacement snippet because the target file does not exist yet. The edit tool may still fail.";
 	}
+
+	const beforeContent = typeof currentFileContents === "string" ? currentFileContents : (edits[0]?.oldText ?? "");
+	const afterContent = workingContent ?? (edits[0]?.newText ?? "");
 
 	const diffTextResult = buildDiffText(beforeContent, afterContent, displayPath);
 	const diffLines = splitLines(diffTextResult.diffText);
@@ -278,7 +277,7 @@ function buildEditPreview(
 		diffText: diffTextResult.diffText,
 		diffLines,
 		stats: getDiffStats(diffTextResult.diffText),
-		note: combineNotes(note, diffTextResult.note),
+		note: combineNotes(...notes, diffTextResult.note),
 		isNewFile: false,
 	};
 }
@@ -696,7 +695,7 @@ export default function editApprovalModeExtension(pi: ExtensionAPI): void {
 		}
 
 		const preview = isToolCallEventType("edit", event)
-			? buildEditPreview(ctx.cwd, event.input.path, event.input.oldText, event.input.newText)
+			? buildEditPreview(ctx.cwd, event.input.path, event.input.edits)
 			: isToolCallEventType("write", event)
 				? buildWritePreview(ctx.cwd, event.input.path, event.input.content)
 				: undefined;
