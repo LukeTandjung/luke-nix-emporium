@@ -684,11 +684,6 @@ export default function editApprovalModeExtension(pi: ExtensionAPI): void {
 		updateStatus(ctx, state.mode);
 	});
 
-	pi.on("session_switch", async (_event, ctx) => {
-		state.mode = loadMode();
-		updateStatus(ctx, state.mode);
-	});
-
 	pi.on("tool_call", async (event, ctx) => {
 		if (state.mode !== "review") {
 			return undefined;

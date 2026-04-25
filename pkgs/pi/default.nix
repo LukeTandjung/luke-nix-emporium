@@ -10,16 +10,16 @@
 
 buildNpmPackage {
   pname = "pi";
-  version = "0.65.0";
+  version = "0.70.2";
 
   src = fetchFromGitHub {
-    owner = "LukeTandjung";
+    owner = "badlogic";
     repo = "pi-mono";
-    rev = "82fbc4a03b04f73aeb7cf9b13bb7bc777f56ebba";
-    hash = "sha256-j4H3mxVh1FBjy29nE4todF+xzb2Dtxf+IPdUKkO1YtM=";
+    rev = "v0.70.2";
+    hash = "sha256-qqmJloTp3mWuZBGgpwoyoFyXx6QD8xhJEwCZb7xFabM=";
   };
 
-  npmDepsHash = "sha256-PbcHSLRogYLGSs/7pMi7C1FQVARx/2OElt7QXGSQOqw=";
+  npmDepsHash = "sha256-ImDvTC0Nm+IGYJuqjwUUfnOtA65uJvjlpP4h2Xt/2vE=";
 
   makeCacheWritable = true;
 
@@ -67,8 +67,8 @@ buildNpmPackage {
 
   meta = {
     description = "A terminal-based coding agent with multi-model support";
-    homepage = "https://github.com/LukeTandjung/pi-mono";
-    changelog = "https://github.com/LukeTandjung/pi-mono/releases";
+    homepage = "https://github.com/badlogic/pi-mono";
+    changelog = "https://github.com/badlogic/pi-mono/releases";
     license = lib.licenses.mit;
     platforms = lib.platforms.all;
     mainProgram = "pi";
