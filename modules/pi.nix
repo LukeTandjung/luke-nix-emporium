@@ -21,7 +21,7 @@ let
   defaultSkills = (lib.mapAttrs
     (name: _: skillsDir + "/${name}/SKILL.md")
     (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir))) // {
-    pi-ralph-wiggum = ralphWiggum + "/SKILL.md";
+    pi-ralph-wiggum = builtins.readFile (ralphWiggum + "/SKILL.md");
   };
 
   defaultPrompts = lib.mapAttrs
