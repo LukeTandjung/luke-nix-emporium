@@ -10,17 +10,29 @@ let
   extensionsDir = ../pkgs/pi/extensions;
   contextDir = ../pkgs/pi/context;
 
-  defaultSkills = lib.mapAttrs
+  # https://github.com/tmustier/pi-extensions/tree/main/pi-ralph-wiggum
+  ralphWiggum = pkgs.fetchFromGitHub {
+    owner = "tmustier";
+    repo = "pi-extensions";
+    rev = "a6839e57c0f0d8d534b01e646abce2d6530faf01";
+    hash = "sha256-ecS05kVnga1y+OoRoUH7/+WCrQsxgP/q/AcSWAPyO8o=";
+  } + "/pi-ralph-wiggum";
+
+  defaultSkills = (lib.mapAttrs
     (name: _: skillsDir + "/${name}/SKILL.md")
-    (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
+    (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir))) // {
+    pi-ralph-wiggum = ralphWiggum + "/SKILL.md";
+  };
 
   defaultPrompts = lib.mapAttrs
     (name: _: promptsDir + "/${name}/PROMPT.md")
     (lib.filterAttrs (_: type: type == "directory") (builtins.readDir promptsDir));
 
-  defaultExtensions = lib.mapAttrs
+  defaultExtensions = (lib.mapAttrs
     (name: _: extensionsDir + "/${name}")
-    (lib.filterAttrs (_: type: type == "regular") (builtins.readDir extensionsDir));
+    (lib.filterAttrs (_: type: type == "regular") (builtins.readDir extensionsDir))) // {
+    pi-ralph-wiggum = ralphWiggum;
+  };
 in
 {
   options.programs.pi = {
@@ -100,7 +112,7 @@ in
       default = defaultExtensions;
       description = ''
         Extensions to install. Each key is an extension name, and the value
-        is a path to the extension file (.ts).
+        is a path to the extension file (.ts) or a directory with a Pi extension entrypoint.
         Linked to {file}`~/.pi/agent/extensions/<name>`.
       '';
       example = lib.literalExpression ''

@@ -148,9 +148,9 @@ prompts = {
 
 ### `programs.pi.extensions`
 
-Type: `attrsOf path` | Default: `{ }`
+Type: `attrsOf path` | Default: bundled extensions (`edit-approval-mode.ts`, `typst-mcp.ts`, `pi-ralph-wiggum`)
 
-Extensions to install. Each key is an extension name, and the value is a path to the extension file (`.ts`). Linked to `~/.pi/agent/extensions/<name>`.
+Extensions to install. Each key is an extension name, and the value is a path to an extension file (`.ts`) or a directory with a Pi extension entrypoint. Linked to `~/.pi/agent/extensions/<name>`.
 
 ```nix
 extensions = {

@@ -13,6 +13,10 @@ Be concise in your replies.
 Feature implementation is split into two separate parts: frontend and backend.
 Use the `/frontend-feature` or `/backend-feature` prompts to get the full checklist for each.
 
+# Available CLI Utilities
+
+The following CLI utilities are available and may be used when helpful: `ast-grep`, `fastmod`, `fzf`, `gh`, `jq`, `ripgrep` (`rg`), and `tree`.
+
 # TypeScript Rules
 
 - In tsconfig.json, under compilerOptions, the paths key must always be the value { "*": [ "./app/*" ] }.
