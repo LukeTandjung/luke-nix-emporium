@@ -33,6 +33,13 @@ let
     (lib.filterAttrs (_: type: type == "regular") (builtins.readDir extensionsDir))) // {
     pi-ralph-wiggum = ralphWiggum;
   };
+
+  # Bare "typebox" (v1.x) is a dependency of the Nix-packaged pi but may not be
+  # available when a third-party pi binary (e.g. Architect's bundled copy) loads
+  # extensions from ~/.pi/agent/extensions/.  Symlinking the package into a
+  # node_modules directory next to the extensions ensures Node resolution finds it
+  # regardless of which pi binary is in use.
+  typebox = cfg.package + "/lib/pi-mono/node_modules/typebox";
 in
 {
   options.programs.pi = {
@@ -183,6 +190,10 @@ in
       (lib.mapAttrs' (name: value:
         lib.nameValuePair ".pi/agent/extensions/${name}" { source = value; }
       ) cfg.extensions)
+
+      {
+        ".pi/agent/extensions/node_modules/typebox".source = typebox;
+      }
 
       (lib.optionalAttrs (cfg.context.agents != null) {
         ".pi/agent/AGENTS.md".text = cfg.context.agents;
