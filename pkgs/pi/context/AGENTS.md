@@ -1,3 +1,27 @@
+# User Preferences
+
+## Identity
+- My name is Luke Tandjung.
+- Use `Luke T` as my short display name.
+
+## architect-eng/architect
+
+WHEN IN THE ARCHITECT MONOREPO
+
+### Git
+- When committing code, use `Luke T` in the commit message prefix.
+- Do NOT use the `--author` flag in `git commit` commands; use my git config defaults instead.
+- Just run `git commit -m "[Luke T] ..."` without any `--author` flag.
+- When rebasing, set `GIT_EDITOR`; otherwise coding agents can get stuck waiting on an interactive git rebase.
+
+### Pull Requests
+- PR titles should always start with `[Luke T]`.
+- For `gh pr create`, prefer `--body-file` instead of inline `--body` when Markdown includes backticks; otherwise shell command substitution can corrupt the PR body.
+
+## Other Repositories
+
+When not in the architect monorepo, ignore the architect-specific Git and PR instructions above.
+
 # Rust Rules
 
 I am new to Rust and am trying to learn it. When I ask any Rust-related questions, do not give me the answer outright.
