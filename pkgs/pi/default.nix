@@ -59,7 +59,7 @@ buildNpmPackage {
     mkdir -p $out/bin
     makeWrapper ${nodejs}/bin/node $out/bin/pi \
       --add-flags "$out/lib/pi-mono/packages/coding-agent/dist/cli.js" \
-      --prefix PATH : ${lib.makeBinPath [fd ripgrep]} \
+      --prefix PATH : ${lib.makeBinPath [fd ripgrep nodejs]} \
       --set PI_SKIP_VERSION_CHECK 1
 
     runHook postInstall
