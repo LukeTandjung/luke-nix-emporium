@@ -10,16 +10,16 @@
 
 buildNpmPackage {
   pname = "pi";
-  version = "0.70.2";
+  version = "0.75.3";
 
   src = fetchFromGitHub {
     owner = "badlogic";
     repo = "pi-mono";
-    rev = "v0.70.2";
-    hash = "sha256-qqmJloTp3mWuZBGgpwoyoFyXx6QD8xhJEwCZb7xFabM=";
+    rev = "v0.75.3";
+    hash = "sha256-c/+cxkp/EZ2PLERxTENN5edXHEs7M2oqzNepjRA4TIE=";
   };
 
-  npmDepsHash = "sha256-ImDvTC0Nm+IGYJuqjwUUfnOtA65uJvjlpP4h2Xt/2vE=";
+  npmDepsHash = "sha256-/mWjrZFzRmtkbWYMJOXKnLPxFITFndq5hgdY0DnPfAg=";
 
   makeCacheWritable = true;
 
