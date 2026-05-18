@@ -40,9 +40,9 @@ A Nix flake for installing [pi](https://github.com/LukeTandjung/pi-mono), a term
       theme = "dark";
     };
 
-    mcpAdapter.enable = true;
     mcp = {
-      mcpServers = {
+      enable = true;
+      servers = {
         chrome-devtools = {
           command = "npx";
           args = [ "-y" "chrome-devtools-mcp@latest" ];
@@ -125,32 +125,38 @@ settings = {
 };
 ```
 
-### `programs.pi.mcpAdapter.enable`
+### `programs.pi.mcp.enable`
 
 Type: `boolean` | Default: `false`
 
-Whether to add the `pi-mcp-adapter` package to `~/.pi/agent/settings.json`.
+Whether to enable MCP support through `pi-mcp-adapter`. This adds `npm:pi-mcp-adapter` to `~/.pi/agent/settings.json`.
 
-### `programs.pi.mcpAdapter.packageSource`
+### `programs.pi.mcp.packageSource`
 
 Type: `string` | Default: `"npm:pi-mcp-adapter"`
 
-Pi package source used when `programs.pi.mcpAdapter.enable` is enabled.
+Pi package source used when `programs.pi.mcp.enable` is enabled.
 
-### `programs.pi.mcp`
+### `programs.pi.mcp.settings`
 
 Type: `attrs` | Default: `{ }`
 
-MCP adapter configuration written to `~/.pi/agent/mcp.json`.
+pi-mcp-adapter settings written under `settings` in `~/.pi/agent/mcp.json`.
+
+### `programs.pi.mcp.servers`
+
+Type: `attrs` | Default: `{ }`
+
+MCP servers written under `mcpServers` in `~/.pi/agent/mcp.json`.
 
 ```nix
-mcpAdapter.enable = true;
 mcp = {
+  enable = true;
   settings = {
     toolPrefix = "server";
     idleTimeout = 10;
   };
-  mcpServers = {
+  servers = {
     pencil = {
       command = "${pkgs.pencil}/opt/pencil/resources/app.asar.unpacked/out/mcp-server-linux-x64";
       args = [ "--app" "desktop" ];

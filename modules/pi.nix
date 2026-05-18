@@ -34,8 +34,12 @@ let
     pi-ralph-wiggum = ralphWiggum;
   };
 
-  effectiveSettings = cfg.settings // lib.optionalAttrs cfg.mcpAdapter.enable {
-    packages = lib.unique ((cfg.settings.packages or [ ]) ++ [ cfg.mcpAdapter.packageSource ]);
+  mcpConfig = cfg.mcp.extraConfig
+    // lib.optionalAttrs (cfg.mcp.settings != { }) { settings = cfg.mcp.settings; }
+    // lib.optionalAttrs (cfg.mcp.servers != { }) { mcpServers = cfg.mcp.servers; };
+
+  effectiveSettings = cfg.settings // lib.optionalAttrs cfg.mcp.enable {
+    packages = lib.unique ((cfg.settings.packages or [ ]) ++ [ cfg.mcp.packageSource ]);
   };
 
   # Bare "typebox" (v1.x) is a dependency of the Nix-packaged pi but may not be
@@ -81,37 +85,47 @@ in
       '';
     };
 
-    mcpAdapter = {
-      enable = lib.mkEnableOption "pi-mcp-adapter package";
+    mcp = {
+      enable = lib.mkEnableOption "MCP support through pi-mcp-adapter";
 
       packageSource = lib.mkOption {
         type = lib.types.str;
         default = "npm:pi-mcp-adapter";
         description = "Pi package source for the MCP adapter.";
       };
-    };
 
-    mcp = lib.mkOption {
-      type = jsonFormat.type;
-      default = { };
-      description = ''
-        MCP adapter configuration written to {file}`~/.pi/agent/mcp.json`.
-        This file is consumed by the pi-mcp-adapter package.
-      '';
-      example = lib.literalExpression ''
-        {
-          settings = {
+      settings = lib.mkOption {
+        type = jsonFormat.type;
+        default = { };
+        description = "pi-mcp-adapter settings written under `settings` in `~/.pi/agent/mcp.json`.";
+        example = lib.literalExpression ''
+          {
             toolPrefix = "server";
             idleTimeout = 10;
-          };
-          mcpServers = {
+            directTools = false;
+          }
+        '';
+      };
+
+      servers = lib.mkOption {
+        type = jsonFormat.type;
+        default = { };
+        description = "MCP servers written under `mcpServers` in `~/.pi/agent/mcp.json`.";
+        example = lib.literalExpression ''
+          {
             chrome-devtools = {
               command = "npx";
               args = [ "-y" "chrome-devtools-mcp@latest" ];
             };
-          };
-        }
-      '';
+          }
+        '';
+      };
+
+      extraConfig = lib.mkOption {
+        type = jsonFormat.type;
+        default = { };
+        description = "Additional raw configuration merged into `~/.pi/agent/mcp.json`.";
+      };
     };
 
     skills = lib.mkOption {
@@ -208,8 +222,8 @@ in
         ".pi/agent/settings.json".source = jsonFormat.generate "settings.json" effectiveSettings;
       })
 
-      (lib.optionalAttrs (cfg.mcp != { }) {
-        ".pi/agent/mcp.json".source = jsonFormat.generate "mcp.json" cfg.mcp;
+      (lib.optionalAttrs (mcpConfig != { }) {
+        ".pi/agent/mcp.json".source = jsonFormat.generate "mcp.json" mcpConfig;
       })
 
       (lib.mapAttrs' (name: value:
