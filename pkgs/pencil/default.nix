@@ -4,6 +4,7 @@
   fetchurl,
   autoPatchelfHook,
   makeWrapper,
+  wrapGAppsHook3,
   undmg,
   alsa-lib,
   at-spi2-atk,
@@ -76,6 +77,7 @@ stdenv.mkDerivation (finalAttrs: {
     makeWrapper
   ] ++ lib.optionals stdenv.isLinux [
     autoPatchelfHook
+    wrapGAppsHook3
   ] ++ lib.optionals stdenv.isDarwin [
     undmg
   ];
@@ -144,6 +146,8 @@ stdenv.mkDerivation (finalAttrs: {
 
     chmod +x "$out/opt/pencil/pencil"
     makeWrapper "$out/opt/pencil/pencil" "$out/bin/pencil" \
+      "''${gappsWrapperArgs[@]}" \
+      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ libglvnd mesa ]} \
       --add-flags "--no-sandbox"
 
     runHook postInstall
