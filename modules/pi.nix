@@ -34,6 +34,10 @@ let
     pi-ralph-wiggum = ralphWiggum;
   };
 
+  effectiveSettings = cfg.settings // lib.optionalAttrs cfg.mcpAdapter.enable {
+    packages = lib.unique ((cfg.settings.packages or [ ]) ++ [ cfg.mcpAdapter.packageSource ]);
+  };
+
   # Bare "typebox" (v1.x) is a dependency of the Nix-packaged pi but may not be
   # available when a third-party pi binary (e.g. Architect's bundled copy) loads
   # extensions from ~/.pi/agent/extensions/.  Symlinking the package into a
@@ -72,6 +76,39 @@ in
           retry = {
             enabled = true;
             maxRetries = 3;
+          };
+        }
+      '';
+    };
+
+    mcpAdapter = {
+      enable = lib.mkEnableOption "pi-mcp-adapter package";
+
+      packageSource = lib.mkOption {
+        type = lib.types.str;
+        default = "npm:pi-mcp-adapter";
+        description = "Pi package source for the MCP adapter.";
+      };
+    };
+
+    mcp = lib.mkOption {
+      type = jsonFormat.type;
+      default = { };
+      description = ''
+        MCP adapter configuration written to {file}`~/.pi/agent/mcp.json`.
+        This file is consumed by the pi-mcp-adapter package.
+      '';
+      example = lib.literalExpression ''
+        {
+          settings = {
+            toolPrefix = "server";
+            idleTimeout = 10;
+          };
+          mcpServers = {
+            chrome-devtools = {
+              command = "npx";
+              args = [ "-y" "chrome-devtools-mcp@latest" ];
+            };
           };
         }
       '';
@@ -167,8 +204,12 @@ in
     home.packages = [ cfg.package ];
 
     home.file = lib.mergeAttrsList [
-      (lib.optionalAttrs (cfg.settings != { }) {
-        ".pi/agent/settings.json".source = jsonFormat.generate "settings.json" cfg.settings;
+      (lib.optionalAttrs (effectiveSettings != { }) {
+        ".pi/agent/settings.json".source = jsonFormat.generate "settings.json" effectiveSettings;
+      })
+
+      (lib.optionalAttrs (cfg.mcp != { }) {
+        ".pi/agent/mcp.json".source = jsonFormat.generate "mcp.json" cfg.mcp;
       })
 
       (lib.mapAttrs' (name: value:

@@ -39,6 +39,16 @@ A Nix flake for installing [pi](https://github.com/LukeTandjung/pi-mono), a term
       defaultThinkingLevel = "medium";
       theme = "dark";
     };
+
+    mcpAdapter.enable = true;
+    mcp = {
+      mcpServers = {
+        chrome-devtools = {
+          command = "npx";
+          args = [ "-y" "chrome-devtools-mcp@latest" ];
+        };
+      };
+    };
   };
 }
 ```
@@ -111,6 +121,41 @@ settings = {
   retry = {
     enabled = true;
     maxRetries = 3;
+  };
+};
+```
+
+### `programs.pi.mcpAdapter.enable`
+
+Type: `boolean` | Default: `false`
+
+Whether to add the `pi-mcp-adapter` package to `~/.pi/agent/settings.json`.
+
+### `programs.pi.mcpAdapter.packageSource`
+
+Type: `string` | Default: `"npm:pi-mcp-adapter"`
+
+Pi package source used when `programs.pi.mcpAdapter.enable` is enabled.
+
+### `programs.pi.mcp`
+
+Type: `attrs` | Default: `{ }`
+
+MCP adapter configuration written to `~/.pi/agent/mcp.json`.
+
+```nix
+mcpAdapter.enable = true;
+mcp = {
+  settings = {
+    toolPrefix = "server";
+    idleTimeout = 10;
+  };
+  mcpServers = {
+    pencil = {
+      command = "${pkgs.pencil}/opt/pencil/resources/app.asar.unpacked/out/mcp-server-linux-x64";
+      args = [ "--app" "desktop" ];
+      env = { };
+    };
   };
 };
 ```
