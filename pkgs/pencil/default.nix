@@ -73,6 +73,11 @@ stdenv.mkDerivation (finalAttrs: {
 
   src = fetchurl source;
 
+  # The macOS DMG contains both `Pencil.app` and an `Applications` link,
+  # so the default unpack phase sees multiple top-level entries. Point the
+  # source root at the unpack directory itself.
+  sourceRoot = lib.optionalString stdenv.isDarwin ".";
+
   nativeBuildInputs = [
     makeWrapper
   ] ++ lib.optionals stdenv.isLinux [
@@ -81,6 +86,10 @@ stdenv.mkDerivation (finalAttrs: {
   ] ++ lib.optionals stdenv.isDarwin [
     undmg
   ];
+
+  # The macOS app bundle ships assorted non-Darwin artifacts inside app
+  # resources. Avoid noisy `patchelf` attempts during fixup on Darwin.
+  dontPatchELF = stdenv.isDarwin;
 
   autoPatchelfIgnoreMissingDeps = [
     "libc++.so.9.0"
