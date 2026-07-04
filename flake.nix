@@ -37,17 +37,21 @@
           pi = pkgs.callPackage ./pkgs/pi { };
           terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
           default = self.packages.${system}.leetgpu_cli;
+        } // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          claude_desktop = pkgs.callPackage ./pkgs/claude-desktop { };
         }
       );
 
       homeManagerModules = {
         bookokrat = import ./modules/bookokrat.nix;
+        claude-desktop = import ./modules/claude-desktop.nix;
         leetgpu = import ./modules/leetgpu.nix;
         pencil = import ./modules/pencil.nix;
         pi = import ./modules/pi.nix;
         default = {
           imports = [
             self.homeManagerModules.bookokrat
+            self.homeManagerModules.claude-desktop
             self.homeManagerModules.leetgpu
             self.homeManagerModules.pencil
             self.homeManagerModules.pi
