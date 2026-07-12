@@ -12,11 +12,13 @@ You are running a literal implementation-readiness review, not implementing the 
 1. If the user has not provided a ticket/spec, ask for it before continuing.
    - Prefer the `ask_user_question` tool when available.
    - Offer structured options such as: paste the ticket now, point to a file/issue, or cancel.
-2. Spawn a subagent so the review does not pollute the parent context window.
-   - Use `pi-subagents` with the `delegate` agent unless a more suitable agent is explicitly requested.
-   - Do not specify a model unless the user asks; builtin subagents inherit the current Pi default/current model.
-   - Give the subagent a fresh, self-contained prompt containing the ticket/spec and the rubric below.
-3. The subagent must pretend to be a hyper-literal implementer:
+2. Start a separate, non-interactive Pi process so the review does not pollute the parent context window.
+   - Do not use subagents.
+   - Write a fresh, self-contained prompt containing the ticket/spec and the rubric below to a temporary file.
+   - Run `pi --print --no-session --no-extensions --no-skills --no-prompt-templates --model <current-provider/current-model> @<prompt-file>` with the exact provider and model used by the current Pi session. Preserve the current thinking level by adding it to the model argument or passing `--thinking <current-level>`.
+   - Capture the child Pi process's stdout, then delete the temporary prompt file.
+   - If the current provider, model, or thinking level cannot be determined, ask the user rather than silently using a different model.
+3. The separate Pi instance must pretend to be a hyper-literal implementer:
    - It can only implement exactly what is written.
    - It must not infer intent, fill gaps silently, or assume product context not in the ticket.
    - It should be pedantic about contradictions, undefined terms, missing acceptance criteria, and edge cases.
@@ -26,9 +28,9 @@ You are running a literal implementation-readiness review, not implementing the 
    - Keep each tool call to 1-4 questions and 2-4 options per question.
 5. Do not use `ask_user_question` only for this skill. It is a general-purpose structured-question tool and may be used whenever typed, structured clarification is better than a free-form chat reply.
 
-## Subagent prompt rubric
+## Separate Pi prompt rubric
 
-Ask the subagent to return:
+Ask the separate Pi instance to return:
 
 ```markdown
 # Autism Mode Ticket Readiness Review
@@ -68,6 +70,6 @@ For each question:
 A concise rewrite or patch list that would raise the ticket readiness score.
 ```
 
-## Parent response after subagent returns
+## Parent response after the separate Pi instance returns
 
-Summarize the subagent output concisely, then ask the user the highest-impact unresolved questions first using `ask_user_question` when available. Prefer grouped decision questions with recommended defaults over a long free-form list.
+Summarize the separate Pi instance's output concisely, then ask the user the highest-impact unresolved questions first using `ask_user_question` when available. Prefer grouped decision questions with recommended defaults over a long free-form list.

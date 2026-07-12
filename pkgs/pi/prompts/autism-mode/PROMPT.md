@@ -1,6 +1,6 @@
 ---
 name: autism-mode
-description: Run a literal subagent ticket/spec readiness review and ask structured clarification questions.
+description: Run a literal ticket/spec readiness review in a separate Pi instance and ask structured clarification questions.
 argument-hint: "[ticket/spec or file/issue reference]"
 ---
 
