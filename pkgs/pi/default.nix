@@ -2,7 +2,6 @@
   lib,
   buildNpmPackage,
   fetchFromGitHub,
-  fetchurl,
   fd,
   ripgrep,
   nodejs,
@@ -10,30 +9,14 @@
 }:
 
 let
-  # Snapshots of the model catalog APIs consumed by packages/ai's
+  # Vendored snapshots of the model catalog APIs consumed by packages/ai's
   # generate-models script. The script normally fetches these at build time,
-  # which the Nix sandbox blocks — without them most provider *.models.ts
-  # files are never generated and the CLI crashes at startup
-  # (ERR_MODULE_NOT_FOUND on e.g. amazon-bedrock.models.js). Every static
-  # src/providers/*.ts imports its generated catalog, so all four sources
-  # are load-bearing. Bump the hashes to refresh the catalogs; they change
-  # upstream often, so expect to re-pin when bumping the pi version.
-  modelsDevData = fetchurl {
-    url = "https://models.dev/api.json";
-    hash = "sha256-TkJtFxe+fa5qd4LlZSYa6repd4hlWAUtWNHixrcwPco=";
-  };
-  nvidiaModels = fetchurl {
-    url = "https://integrate.api.nvidia.com/v1/models";
-    hash = "sha256-V3M9cf0TJD5G1/BDClWB2tmZ2sOeThs2rjoaP2kWIgI=";
-  };
-  openrouterModels = fetchurl {
-    url = "https://openrouter.ai/api/v1/models";
-    hash = "sha256-v8ZLJGdo8siPpeJ2eBwBc90YiiZyjdsmzA5CqreXytc=";
-  };
-  aiGatewayModels = fetchurl {
-    url = "https://ai-gateway.vercel.sh/v1/models";
-    hash = "sha256-enA8AmUwUUTzX0qjNYuNmyMCHG+q0s1oAiHWO7Voah8=";
-  };
+  # which is both non-reproducible and blocked by the Nix sandbox. Keep these
+  # snapshots in-tree so rebuilds do not depend on mutable live API responses.
+  modelsDevData = ./model-catalogs/models-dev-api.json;
+  nvidiaModels = ./model-catalogs/nvidia-models.json;
+  openrouterModels = ./model-catalogs/openrouter-models.json;
+  aiGatewayModels = ./model-catalogs/ai-gateway-models.json;
 
   # Reads like `await fetch(...)` but from a store path.
   localResponse = path: ''new Response(await import("node:fs").then((m) => m.readFileSync("${path}", "utf8")))'';
