@@ -9,7 +9,7 @@ buildNpmPackage {
     filter = path: _type: baseNameOf path != "node_modules";
   };
 
-  npmDepsHash = "sha256-dN6zWs9dm8BbVMhTuNgzdBQ57VHxhG0adKZkniQjv7s=";
+  npmDepsHash = "sha256-WiJC48S6Sd0BO7ViOlg7psDN6t+IT2kQBZkL8ZUgKgY=";
   npmDepsFetcherVersion = 2;
   dontNpmBuild = true;
 
