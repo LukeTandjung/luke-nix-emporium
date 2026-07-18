@@ -19,8 +19,17 @@ let
     (lib.filterAttrs (_: type: type == "directory") (builtins.readDir promptsDir));
 
   defaultExtensions = lib.mapAttrs
-    (name: _: extensionsDir + "/${name}")
-    (lib.filterAttrs (_: type: type == "regular") (builtins.readDir extensionsDir));
+    (name: type:
+      let
+        extensionPath = extensionsDir + "/${name}";
+        packagePath = extensionPath + "/package.nix";
+      in
+      if type == "directory" then pkgs.callPackage packagePath { } else extensionPath)
+    (lib.filterAttrs
+      (name: type:
+        type == "regular"
+        || (type == "directory" && builtins.pathExists (extensionsDir + "/${name}/package.nix")))
+      (builtins.readDir extensionsDir));
 
   mcpConfig = cfg.mcp.extraConfig
     // lib.optionalAttrs (cfg.mcp.settings != { }) { settings = cfg.mcp.settings; }
