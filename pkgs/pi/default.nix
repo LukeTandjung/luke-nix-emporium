@@ -23,16 +23,16 @@ let
 in
 buildNpmPackage {
   pname = "pi";
-  version = "0.80.6";
+  version = "0.84.1";
 
   src = fetchFromGitHub {
     owner = "earendil-works";
     repo = "pi";
-    rev = "v0.80.6";
-    hash = "sha256-e/wcHruEcBAHDF5tKvwew7LXjVp0eraHh2k+QaL2sCA=";
+    rev = "v0.84.1";
+    hash = "sha256-lg+I4S/aAjazjhGZU567ow+rksoNiqOqjHl//TjAMes=";
   };
 
-  npmDepsHash = "sha256-xXEOR0epZcfbXayYGyJdBiFVliamBexqA+1Sd7wlGhU=";
+  npmDepsHash = "sha256-tufyZQRPAUeDtiq0UQodbKA/Y9xUAvNT8K+NWFjkeME=";
 
   # Point the script's catalog fetches at the pinned snapshots.
   postPatch = ''
@@ -63,6 +63,9 @@ buildNpmPackage {
   preBuild = ''
     TSGO="$(pwd)/node_modules/.bin/tsgo"
 
+    (cd packages/telemetry && "$TSGO" -p tsconfig.build.json || true)
+    (cd packages/protocol && "$TSGO" -p tsconfig.build.json || true)
+    (cd packages/client && "$TSGO" -p tsconfig.build.json || true)
     (cd packages/tui && "$TSGO" -p tsconfig.build.json || true)
     (cd packages/ai && npm run generate-models && ("$TSGO" -p tsconfig.build.json || true))
     (cd packages/agent && "$TSGO" -p tsconfig.build.json || true)
