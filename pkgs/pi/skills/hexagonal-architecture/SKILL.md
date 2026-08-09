@@ -61,8 +61,10 @@ Rules:
 - `impl/` is the only place that imports both app and concrete adapters.
 - Prefer functions and records. TypeScript Effect service/tag classes and Rust
   data structs are language mechanisms, not business-logic objects.
-- Greenfield orchestration-heavy services default to the canonical layout. Omit
-  a layer only when genuinely unused and record why.
+- Greenfield orchestration-heavy services and product features default to the
+  canonical layout. Omit a layer only when genuinely unused and record why.
+- Rust crate boundaries represent cohesive services or product features, never
+  architectural layers or implementation technologies.
 
 ## Canonical layouts
 
@@ -129,10 +131,12 @@ workspaces/services/{service}/
     └── test/
 ```
 
-### Rust service crate
+### Rust service or product-feature crate
 
-The same boundaries become Rust modules inside a crate. Keep migrations at crate
-root so the service owns them.
+Each Rust crate represents one cohesive service or one cohesive product feature.
+Never create crates merely to separate architectural layers, adapters, FFI, UI,
+or other implementation technologies. The same boundaries become modules inside
+the owning crate. Keep migrations at crate root so a service owns them.
 
 ```text
 crates/{service}/
@@ -161,7 +165,15 @@ crates/{service}/
 │   └── main.rs
 ├── migrations/
 └── tests/
+    ├── core/
+    ├── app/
+    ├── adapters/
+    └── impls/
 ```
+
+Production modules under `src/` contain no inline test modules. Keep tests under
+`tests/`, organized by the architectural layer they exercise. Omit unused
+production and test layers rather than creating empty ceremony.
 
 Do not use generic `handlers/`, `commands/`, or `queries/` buckets. Organize app
 code by application concept, with action names such as `create*`, `update*`,
@@ -399,6 +411,10 @@ language-specific code:
 
 ## Acceptance checklist
 
+- [ ] Each Rust crate represents one cohesive service or product feature, not an
+      architectural layer or implementation technology.
+- [ ] Rust tests live under the crate-level `tests/` directory, not inline in
+      production modules.
 - [ ] Canonical layers exist or each omission is documented as deliberate.
 - [ ] Core has no I/O, clock, randomness, environment, logger, workflow, or
       infrastructure imports.

@@ -4,6 +4,37 @@ When assisting a learner, explain the direction, relevant traits/types, and
 documentation rather than supplying a finished implementation. The snippets here
 communicate boundaries only.
 
+## Crate boundary and layout
+
+Each crate represents one cohesive service or one cohesive product feature. Do
+not split a feature into separate core, port, adapter, FFI, or UI crates merely
+to enforce dependency direction; enforce those boundaries with modules inside
+the owning crate.
+
+```text
+crates/{service-or-feature}/
+├── Cargo.toml
+├── src/
+│   ├── api/          # when an external boundary exists
+│   ├── core/         # when pure decisions exist
+│   ├── ports/
+│   ├── app/
+│   ├── adapters/
+│   ├── impls/
+│   ├── lib.rs
+│   └── main.rs       # when executable
+└── tests/
+    ├── core/
+    ├── app/
+    ├── adapters/
+    └── impls/
+```
+
+Keep production code and tests physically separate: production modules under
+`src/` must not contain inline `#[cfg(test)] mod tests` blocks. Put tests under
+`tests/`, organized by the architectural layer they exercise. Omit directories
+for layers that do not earn their existence.
+
 ## Mapping
 
 | Architecture     | Rust representation                                         |
@@ -161,16 +192,28 @@ orchestration must not move into one giant activity.
 
 ## Testing
 
-- Core: table-driven pure tests.
-- App: in-memory trait implementations; no database or network.
-- Adapters: integration tests against real dependencies.
-- Wiring/E2E: only critical paths.
+All tests live under the crate-level `tests/` directory, never inline with
+production modules under `src/`. Mirror architectural ownership without
+replicating every source file mechanically:
+
+- `tests/core/`: table-driven pure tests.
+- `tests/app/`: use-case tests with in-memory trait implementations; no database
+  or network.
+- `tests/adapters/`: integration tests against real dependencies.
+- `tests/impls/`: critical wiring/E2E paths only.
 
 Tests use valid newtype identifiers and deterministic clock/ID adapters. Avoid
-mocking concrete libraries when a port can be implemented in memory.
+mocking concrete libraries when a port can be implemented in memory. Expose the
+smallest necessary library surface to integration tests; do not make adapter
+internals public solely for trivial forwarding tests.
 
 ## Rust-specific checks
 
+- [ ] Each crate represents one cohesive service or product feature.
+- [ ] Architectural layers and implementation technologies remain modules, not
+      separate crates.
+- [ ] Tests live under `tests/`; production modules contain no inline test
+      modules.
 - [ ] Traits are owned by the application that consumes them.
 - [ ] Core remains synchronous and pure.
 - [ ] Newtypes protect identifiers after parsing.
