@@ -11,7 +11,7 @@ let
   contextDir = ../pkgs/pi/context;
 
   defaultSkills = lib.mapAttrs
-    (name: _: skillsDir + "/${name}/SKILL.md")
+    (name: _: skillsDir + "/${name}")
     (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
 
   defaultPrompts = lib.mapAttrs
@@ -130,8 +130,10 @@ in
       default = defaultSkills;
       description = ''
         Skills to install. Each key is a skill name, and the value is either
-        a path to a SKILL.md file or its content as a multi-line string.
-        Written to {file}`~/.pi/agent/skills/<name>/SKILL.md`.
+        a skill directory, a path to a SKILL.md file, or its content as a
+        multi-line string. Skill directories are linked in full so references,
+        scripts, and assets remain available. Written beneath
+        {file}`~/.pi/agent/skills/<name>`.
       '';
       example = lib.literalExpression ''
         {
@@ -139,7 +141,7 @@ in
             # My Skill
             Description of what this skill does.
           ''';
-          imported-skill = ./skills/other-skill/SKILL.md;
+          imported-skill = ./skills/other-skill;
         }
       '';
     };
@@ -224,11 +226,12 @@ in
       })
 
       (lib.mapAttrs' (name: value:
-        lib.nameValuePair ".pi/agent/skills/${name}/SKILL.md" (
-          if builtins.isString value
-          then { text = value; }
-          else { source = value; }
-        )
+        if builtins.isString value then
+          lib.nameValuePair ".pi/agent/skills/${name}/SKILL.md" { text = value; }
+        else if builtins.pathExists (value + "/SKILL.md") then
+          lib.nameValuePair ".pi/agent/skills/${name}" { source = value; }
+        else
+          lib.nameValuePair ".pi/agent/skills/${name}/SKILL.md" { source = value; }
       ) cfg.skills)
 
       (lib.mapAttrs' (name: value:
