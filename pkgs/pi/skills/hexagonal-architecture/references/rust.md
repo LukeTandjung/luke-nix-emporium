@@ -43,9 +43,87 @@ for layers that do not earn their existence.
 | Port             | application-owned trait                                     |
 | Adapter          | struct or closure implementing a port trait                 |
 | Use case         | function generic over narrow port traits                    |
-| Wiring           | `main.rs` or `wiring` module constructing concrete adapters |
+| API              | public trait plus API-facing boundary types                  |
+| Wiring           | `impls/` composition root constructing concrete adapters     |
 | Expected error   | explicit `Result<T, E>` with service-owned error enum       |
 | Broken invariant | panic only when truly unrecoverable/programmer error        |
+
+## Libraries and capability boundaries
+
+A Cargo dependency is not automatically an external architectural capability.
+A layer may directly import in-process parsers, compilers, UI libraries, codecs,
+algorithms, and similar libraries when that layer owns the responsibility. Do
+not create shallow port/adapter wrappers merely because implementation code
+comes from another crate.
+
+Use an application-owned port when the application needs to invert an external
+capability or runtime effect: clocks, filesystem access, system clipboard,
+network/RPC, databases, randomness or ID generation, environment access,
+queues, or workflow runtimes. Adapters implement those ports.
+
+Statements such as “App depends only on core and ports” describe architectural
+module direction; they do not prohibit ordinary Cargo library dependencies
+appropriate to that layer. For example:
+
+- Typst parsing or compilation needs no port solely because it uses Typst
+  crates.
+- GPUI rendering needs no port solely because it uses GPUI.
+- GPUI-backed system clipboard access crosses an application-owned clipboard
+  port because the clipboard is an external runtime capability.
+- Reading monotonic time crosses a `Clock` port. A `SystemClock` adapter may use
+  `Instant::now()`, while core receives the resulting timestamp explicitly.
+
+## API traits
+
+`api/` owns public interface traits and API-facing configuration, request,
+result, and error types. These caller-facing traits are not ports: ports are
+inward-facing contracts for capabilities app use cases need. `impls/` defines
+concrete types that implement API traits, maps API contracts into app
+operations, and constructs concrete adapters as the composition root.
+
+```text
+caller -> API trait
+             ^
+             | implements
+          Impl type
+             |
+             +-> app
+             +-> adapters
+```
+
+Reject API-to-implementation forwarding:
+
+```rust
+// api/
+pub fn create_editor(/* ... */) {
+    crate::impls::create_editor(/* ... */)
+}
+```
+
+Prefer an API-owned trait implemented in `impls/`:
+
+```rust
+// api/
+pub trait EditorApi {
+    fn create_editor(&self, config: EditorConfig) -> EditorResult;
+}
+
+// impls/
+pub struct EditorApiImpl;
+
+impl EditorApi for EditorApiImpl {
+    fn create_editor(&self, config: EditorConfig) -> EditorResult {
+        // Compose adapters and invoke app operations.
+    }
+}
+
+// lib.rs
+pub use api::*;
+pub use impls::EditorApiImpl;
+```
+
+`api/` must not import or call `impls/`. The crate root may re-export both the
+API traits and concrete implementation type or factory.
 
 ## Core
 
@@ -67,7 +145,9 @@ pub fn decide_schedule(
 ```
 
 Do not read system time, generate randomness, access environment variables,
-spawn tasks, or perform I/O in core.
+spawn tasks, or perform I/O in core. In particular, core must not call
+`Instant::now()` or otherwise read runtime time; a `Clock` port and
+`SystemClock` adapter provide an explicit time value to core.
 
 ## Ports
 
@@ -173,10 +253,12 @@ tolerate at-least-once delivery.
 
 ## Impl and composition
 
-`src/impls/` is Rust's keyword-safe equivalent of `impl/`. It constructs
-concrete adapters, chooses static or dynamic dispatch, opens transactions around
-app use cases, owns task lifecycle/shutdown, maps API calls, and runs the outbox
-processor. It is the only module that imports both app and adapters.
+`src/impls/` is Rust's keyword-safe equivalent of `impl/`. It defines concrete
+implementations of traits owned by `api/`, constructs concrete adapters, chooses
+static or dynamic dispatch, opens transactions around app use cases, owns task
+lifecycle/shutdown, maps API contracts to app operations, and runs the outbox
+processor. It is the only module that imports both app and adapters. `api/`
+never imports `impls/` or reaches it through forwarding functions.
 
 Optional workflow activities are small wrappers over port operations. Durable
 orchestration must not move into one giant activity.
@@ -203,9 +285,11 @@ replicating every source file mechanically:
 - `tests/impls/`: critical wiring/E2E paths only.
 
 Tests use valid newtype identifiers and deterministic clock/ID adapters. Avoid
-mocking concrete libraries when a port can be implemented in memory. Expose the
-smallest necessary library surface to integration tests; do not make adapter
-internals public solely for trivial forwarding tests.
+mocking concrete libraries when a port can be implemented in memory. Test
+in-process libraries directly in the owning layer; do not invent a port merely
+to mock a Cargo dependency. Expose the smallest necessary library surface to
+integration tests; do not make adapter internals public solely for trivial
+forwarding tests.
 
 ## Rust-specific checks
 
@@ -214,8 +298,16 @@ internals public solely for trivial forwarding tests.
       separate crates.
 - [ ] Tests live under `tests/`; production modules contain no inline test
       modules.
-- [ ] Traits are owned by the application that consumes them.
-- [ ] Core remains synchronous and pure.
+- [ ] Public API traits and API-facing boundary types are owned by `api/` and
+      remain distinct from app-owned ports.
+- [ ] Concrete `impls/` types implement API traits and remain the composition
+      root; `api/` contains no forwarding calls into `impls/`.
+- [ ] Traits for external capabilities are owned by the application that
+      consumes them.
+- [ ] In-process Cargo libraries are imported by the responsible layer without
+      ceremonial ports or adapters.
+- [ ] Core remains synchronous and pure; runtime time enters through a `Clock`
+      port and explicit values.
 - [ ] Newtypes protect identifiers after parsing.
 - [ ] `Result`/enums model expected outcomes.
 - [ ] No recoverable-path `unwrap`/`expect`.

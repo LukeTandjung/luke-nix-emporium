@@ -37,7 +37,7 @@ domain event means only a published fact about service-owned state.
 ## Hard boundary
 
 ```text
-API       -> transport contract and mapping; calls impl/service boundary
+API       -> public contract and boundary mapping; Rust traits implemented by Impl
 Core      -> pure decisions and transformations
 Ports     -> application-owned contracts only
 App       -> use cases; depends on core and ports
@@ -56,6 +56,16 @@ Rules:
   global mutation.
 - Runtime values such as time and generated IDs enter core as explicit data.
 - Ports describe application needs, not vendor APIs.
+- A third-party library is not automatically an external architectural
+  capability. In-process parsers, compilers, UI libraries, codecs, algorithms,
+  and similar libraries may be imported directly by the layer that owns that
+  responsibility.
+- Create ports when the application must invert an external capability or
+  runtime effect, such as clocks, filesystem access, system clipboard, network
+  or RPC, databases, randomness or ID generation, environment access, queues,
+  or workflow runtimes. Adapters implement those application-owned ports; do
+  not add shallow adapter wrappers solely because code comes from another
+  crate/package.
 - App never imports adapters, repositories, impl, transport clients, or workflow
   runtimes.
 - `impl/` is the only place that imports both app and concrete adapters.
@@ -175,6 +185,14 @@ Production modules under `src/` contain no inline test modules. Keep tests under
 `tests/`, organized by the architectural layer they exercise. Omit unused
 production and test layers rather than creating empty ceremony.
 
+For Rust, `api/` owns public interface traits and their API-facing
+configuration, request, result, and error types. `impls/` defines concrete types
+that implement those traits and remains the composition root. API modules must
+not import `impls/` or forward calls to it. The crate root may re-export both
+API traits and concrete implementation types or factories. API traits describe
+the public caller-facing service interface; they are distinct from ports, which
+describe capabilities needed inward by app use cases.
+
 Do not use generic `handlers/`, `commands/`, or `queries/` buckets. Organize app
 code by application concept, with action names such as `create*`, `update*`,
 `get*`, and `list*`.
@@ -184,7 +202,10 @@ code by application concept, with action names such as `create*`, `update*`,
 ### API
 
 The API owns transport-safe request/response contracts and boundary mapping.
-DTOs stop here.
+DTOs stop here. In Rust it also owns public API traits and API-facing
+configuration, request, result, and error types; concrete implementations live
+in `impls/` and map those contracts into app operations. Rust API modules never
+call `impls/` through forwarding functions.
 
 - Decode and validate untrusted input before calling inward.
 - Map internal results/errors to transport responses.
@@ -283,7 +304,10 @@ A workflow is an adapter translating a durable runtime into an app use case.
 
 ### Impl
 
-`impl/` is the composition root.
+`impl/` (`impls/` in Rust) is the composition root. In Rust it defines the
+concrete types implementing the public traits owned by `api/`; the crate root
+may re-export both sides. The dependency points from the implementation to the
+API trait, never from `api/` to `impls/` through a forwarding function.
 
 - Constructs repositories, adapters, clients, publishers, Layers/runtime
   resources, and processors.
@@ -342,6 +366,12 @@ coupled.
 
 ## Dependency direction
 
+These rows describe architectural module direction. In particular, “App
+depends on core and ports” does not prohibit ordinary Cargo/package library
+dependencies appropriate to app-owned in-process responsibilities. A library
+requires a port only when its use crosses an external capability or runtime
+effect boundary.
+
 | Layer        | May depend on                                              | Must not depend on                             |
 | ------------ | ---------------------------------------------------------- | ---------------------------------------------- |
 | API          | core boundary types, transport framework                   | app implementation, adapters, repositories     |
@@ -383,7 +413,11 @@ with mocks.
 - Temporal/workflow runtime used as an outbox scheduler.
 - Giant activities hiding durable orchestration.
 - Module-global mutable adapter state.
-- Many shallow pass-through layers that add no hidden complexity.
+- Many shallow pass-through layers that add no hidden complexity, including
+  adapter wrappers created solely because an in-process implementation comes
+  from a third-party library.
+- Rust API functions that forward into `impls/` instead of an `impls/` type
+  implementing an API-owned trait.
 - Tests beginning with extensive module mocks.
 
 ## Migration path
@@ -418,8 +452,13 @@ language-specific code:
 - [ ] Canonical layers exist or each omission is documented as deliberate.
 - [ ] Core has no I/O, clock, randomness, environment, logger, workflow, or
       infrastructure imports.
-- [ ] App imports only core and ports.
-- [ ] Ports contain contracts/types only and describe application needs.
+- [ ] App's architectural module dependencies point only to core and ports;
+      appropriate in-process library imports do not require adapters.
+- [ ] Ports contain contracts/types only and describe application needs, not
+      every third-party library.
+- [ ] Rust API traits and API-facing boundary types are owned by `api/`, remain
+      distinct from ports, and are implemented by concrete `impls/` types.
+- [ ] Rust `api/` never imports or forwards calls to `impls/`.
 - [ ] Repositories remain concrete persistence code, distinct from ports.
 - [ ] Postgres adapters bridge repositories to ports.
 - [ ] Impl is the only app/adapters meeting point.
