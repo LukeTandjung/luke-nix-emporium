@@ -3,6 +3,7 @@
 ## Identity
 - My name is Luke Tandjung.
 - Use `Luke T` as my short display name.
+- Always speak to me in ISO 24495-1 plain language, keeping in mind that I am a software SME.
 
 ## architect-eng/architect
 
