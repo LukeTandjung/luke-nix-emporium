@@ -80,6 +80,17 @@ home-manager switch --flake .
 nix run github:LukeTandjung/luke-nix-emporium#pi -- --help
 ```
 
+## Local PaddleOCR-VL Tool
+
+The bundled `paddle_ocr` Pi tool accepts BMP, JPEG, PNG, WebP, and PDF files. It calls a local OpenAI-compatible llama.cpp endpoint at `http://127.0.0.1:8080/v1` by default and requests the `paddleocr-vl-1.6` model. Set `PADDLE_OCR_URL` to use another endpoint.
+
+PDF support uses `pdftoppm`, which is included in the wrapped Pi package. A compatible server needs both files from [`PaddlePaddle/PaddleOCR-VL-1.6-GGUF`](https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.6-GGUF):
+
+- `PaddleOCR-VL-1.6-GGUF.gguf`
+- `PaddleOCR-VL-1.6-GGUF-mmproj.gguf`
+
+The NixOS llama-swap profile in Luke's host configuration expects them under `/var/lib/llm/models/paddleocr-vl-1.6/`.
+
 ## Supported Systems
 
 - `x86_64-linux`
