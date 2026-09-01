@@ -32,6 +32,7 @@
         in
         {
           bookokrat = pkgs.callPackage ./pkgs/bookokrat { };
+          claude_code = pkgs.callPackage ./pkgs/claude-code { };
           leetgpu_cli = pkgs.callPackage ./pkgs/leetgpu-cli { };
           pencil = pkgs.callPackage ./pkgs/pencil { };
           pi = pkgs.callPackage ./pkgs/pi { };
@@ -45,6 +46,7 @@
 
       homeManagerModules = {
         bookokrat = import ./modules/bookokrat.nix;
+        claude-code = import ./modules/claude-code.nix;
         claude-desktop = import ./modules/claude-desktop.nix;
         leetgpu = import ./modules/leetgpu.nix;
         pencil = import ./modules/pencil.nix;
@@ -52,6 +54,7 @@
         default = {
           imports = [
             self.homeManagerModules.bookokrat
+            self.homeManagerModules.claude-code
             self.homeManagerModules.claude-desktop
             self.homeManagerModules.leetgpu
             self.homeManagerModules.pencil
