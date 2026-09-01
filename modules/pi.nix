@@ -16,7 +16,64 @@ let
     rev = "cc75369f741af7d490936f82002c2d28e3b3d78d";
     hash = "sha256-foxnLAWxLKItABamN83sN1lX7BiPKGCbD6F6hSJCypc=";
   };
-  quintSkillsDir = quintLlmKit + "/quint-llm-kit-plugin/skills";
+  quintSkillsSourceDir = quintLlmKit + "/quint-llm-kit-plugin/skills";
+  quintModelingDescription = ''
+    Build or review a Quint model of a system, protocol, algorithm, design, or implementation. Use
+    when asked to model, formally specify, model-check, or verify something in Quint, including
+    translating TLA+ or source code. Covers the end-to-end modeling workflow: identify state,
+    define actions and invariants, run checks, and refine the model from counterexamples. Also use
+    to audit an existing Quint specification. Do not use for implementing code against an existing
+    Quint spec (use quint-execute-spec) or for standalone Quint syntax and CLI questions (use
+    quint-lang).
+  '';
+  quintSkillsDir = pkgs.runCommand "quint-llm-kit-skills" {
+    nativeBuildInputs = [ pkgs.python3 ];
+    inherit quintModelingDescription;
+  } ''
+    cp -R ${quintSkillsSourceDir} "$out"
+    chmod -R u+w "$out"
+    python - "$out/quint-modeling/SKILL.md" <<'PY'
+    import os
+    import re
+    import sys
+
+    path = sys.argv[1]
+    with open(path) as file:
+        content = file.read()
+
+    description = " ".join(os.environ["quintModelingDescription"].split())
+    replacement = f"description: >\n  {description}"
+    content, count = re.subn(
+        r"description:.*?(?=\n---)",
+        replacement,
+        content,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if count != 1:
+        raise RuntimeError("could not replace quint-modeling description")
+
+    with open(path, "w") as file:
+        file.write(content)
+
+    skills_root = os.path.dirname(os.path.dirname(path))
+    for directory in os.listdir(skills_root):
+        skill_path = os.path.join(skills_root, directory, "SKILL.md")
+        if not os.path.isfile(skill_path):
+            continue
+        with open(skill_path) as file:
+            skill = file.read()
+        match = re.search(r"^description:\s*(.*?)(?=\n(?:[\w-]+):|\n---)", skill, re.MULTILINE | re.DOTALL)
+        if match is None:
+            raise RuntimeError(f"description is required: {skill_path}")
+        raw = match.group(1).strip()
+        lines = raw.splitlines()[1:] if raw.startswith((">", "|")) else [raw]
+        parsed = " ".join(line.strip() for line in lines).strip().strip("\"'")
+        length = len(parsed.encode("utf-16-le")) // 2
+        if length > 1024:
+            raise RuntimeError(f"description exceeds 1024 characters ({length}): {skill_path}")
+    PY
+  '';
   quintToolchain = pkgs.callPackage ../pkgs/quint-toolchain { };
 
   defaultSkills =
