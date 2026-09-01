@@ -257,7 +257,10 @@ in
         if builtins.isString value && !builtins.pathExists value then
           lib.nameValuePair ".pi/agent/skills/${name}/SKILL.md" { text = value; }
         else if builtins.pathExists (value + "/SKILL.md") then
-          lib.nameValuePair ".pi/agent/skills/${name}" { source = value; }
+          lib.nameValuePair ".pi/agent/skills/${name}" {
+            source = value;
+            force = true;
+          }
         else
           lib.nameValuePair ".pi/agent/skills/${name}/SKILL.md" { source = value; }
       ) cfg.skills)
