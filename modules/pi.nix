@@ -229,6 +229,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Remove the backup left when this skill changed from an unmanaged directory
+    # to a Home Manager-managed symlink. Pi scans backup directories as skills.
+    home.activation.removeStalePiSkillBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+      rm -rf "$HOME/.pi/agent/skills/feature-formal-planning.hm-backup"
+    '';
+
     # Keep the formal-planning toolchain private to the user's Home Manager
     # profile. The JRE is explicit so Apalache and `java` both work in pi
     # sessions without a system-wide Java installation.
@@ -248,7 +254,7 @@ in
       })
 
       (lib.mapAttrs' (name: value:
-        if builtins.isString value then
+        if builtins.isString value && !builtins.pathExists value then
           lib.nameValuePair ".pi/agent/skills/${name}/SKILL.md" { text = value; }
         else if builtins.pathExists (value + "/SKILL.md") then
           lib.nameValuePair ".pi/agent/skills/${name}" { source = value; }
