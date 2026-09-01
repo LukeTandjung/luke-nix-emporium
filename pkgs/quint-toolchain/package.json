@@ -1,0 +1,10 @@
+{
+  "name": "pi-quint-toolchain",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@informalsystems/quint": "^0.32.0",
+    "@terrastruct/d2": "^0.1.33"
+  }
+}

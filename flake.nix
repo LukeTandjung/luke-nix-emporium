@@ -35,6 +35,7 @@
           leetgpu_cli = pkgs.callPackage ./pkgs/leetgpu-cli { };
           pencil = pkgs.callPackage ./pkgs/pencil { };
           pi = pkgs.callPackage ./pkgs/pi { };
+          pi_quint_toolchain = pkgs.callPackage ./pkgs/quint-toolchain { };
           terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
           default = self.packages.${system}.leetgpu_cli;
         } // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {

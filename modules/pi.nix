@@ -10,9 +10,24 @@ let
   extensionsDir = ../pkgs/pi/extensions;
   contextDir = ../pkgs/pi/context;
 
-  defaultSkills = lib.mapAttrs
-    (name: _: skillsDir + "/${name}")
-    (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
+  quintLlmKit = pkgs.fetchFromGitHub {
+    owner = "quint-co";
+    repo = "quint-llm-kit";
+    rev = "cc75369f741af7d490936f82002c2d28e3b3d78d";
+    hash = "sha256-foxnLAWxLKItABamN83sN1lX7BiPKGCbD6F6hSJCypc=";
+  };
+  quintSkillsDir = quintLlmKit + "/quint-llm-kit-plugin/skills";
+  quintToolchain = pkgs.callPackage ../pkgs/quint-toolchain { };
+
+  defaultSkills =
+    lib.mapAttrs
+      (name: _: skillsDir + "/${name}")
+      (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir))
+    // {
+      quint-lang = quintSkillsDir + "/quint-lang";
+      quint-modeling = quintSkillsDir + "/quint-modeling";
+      quint-execute-spec = quintSkillsDir + "/quint-execute-spec";
+    };
 
   defaultPrompts = lib.mapAttrs
     (name: _: promptsDir + "/${name}/PROMPT.md")
@@ -214,7 +229,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ cfg.package ];
+    # Keep the formal-planning toolchain private to the user's Home Manager
+    # profile. The JRE is explicit so Apalache and `java` both work in pi
+    # sessions without a system-wide Java installation.
+    home.packages = [
+      cfg.package
+      quintToolchain
+      pkgs.temurin-jre-bin-17
+    ];
 
     home.file = lib.mergeAttrsList [
       (lib.optionalAttrs (effectiveSettings != { }) {
