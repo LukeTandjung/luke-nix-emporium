@@ -24,16 +24,16 @@ let
 in
 buildNpmPackage {
   pname = "pi";
-  version = "0.84.4";
+  version = "0.85.0-unstable-2026-09-05";
 
   src = fetchFromGitHub {
     owner = "earendil-works";
     repo = "pi";
-    rev = "v0.84.4";
-    hash = "sha256-7z8OXao1PzmBEepDkIqVqyfQBPHulBlKcGymDYsnMvc=";
+    rev = "17de82d7bea18a6589677a9761baabc2060c9efb";
+    hash = "sha256-CGyxalhSHyjvxK8NlNlUZmoYO+h41HMRmgBNJ9llPyE=";
   };
 
-  npmDepsHash = "sha256-35GC3Q4Jf4URvqoEYHeM63x49tTmrth62//PvKm4I7Q=";
+  npmDepsHash = "sha256-K/KiukwTHwu4HE8hUu7ur3bxggwfO0WL+QDI0FtxP3I=";
 
   # Point the script's catalog fetches at the pinned snapshots.
   postPatch = ''
@@ -64,12 +64,14 @@ buildNpmPackage {
   preBuild = ''
     TSGO="$(pwd)/node_modules/.bin/tsgo"
 
+    (cd packages/chord && "$TSGO" -p tsconfig.build.json || true)
     (cd packages/telemetry && "$TSGO" -p tsconfig.build.json || true)
     (cd packages/protocol && "$TSGO" -p tsconfig.build.json || true)
     (cd packages/client && "$TSGO" -p tsconfig.build.json || true)
     (cd packages/tui && "$TSGO" -p tsconfig.build.json || true)
     (cd packages/ai && npm run generate-models && ("$TSGO" -p tsconfig.build.json || true))
     (cd packages/agent && "$TSGO" -p tsconfig.build.json || true)
+    (cd packages/server && "$TSGO" -p tsconfig.build.json || true)
     (cd packages/coding-agent && "$TSGO" -p tsconfig.build.json && npm run copy-assets)
   '';
   dontNpmBuild = true;
