@@ -1,0 +1,10 @@
+result
+*.fasl
+*.core
+.cache/
+.qlot/
+.bundle-libs/
+dist/
+var/
+
+/nix-support/

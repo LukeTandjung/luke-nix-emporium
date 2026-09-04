@@ -1,0 +1,332 @@
+#!/usr/bin/env bash
+
+set -u
+
+resolve_path()
+{
+  local path=$1
+  local directory
+  local target
+
+  case "$path" in
+    /*) ;;
+    *) path=$PWD/$path ;;
+  esac
+  while [[ -L "$path" ]]; do
+    directory=$(CDPATH= cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+      /*) path=$target ;;
+      *) path=$directory/$target ;;
+    esac
+  done
+  directory=$(CDPATH= cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$directory" "$(basename "$path")"
+}
+
+launcher_path=$(resolve_path "${BASH_SOURCE[0]}")
+source_root=$(CDPATH= cd -P "$(dirname "$launcher_path")/.." && pwd)
+source_checksums_path=$source_root/sbcl-source-releases.sha256
+terminal_state=
+recovery_requested=false
+from_source_requested=false
+remaining_arguments=()
+state_home=${XDG_STATE_HOME:-$HOME/.local/state}
+data_home=${XDG_DATA_HOME:-$HOME/.local/share}
+runtime_command_path=$data_home/autolith/runtimes/command
+inherited_runtime_source_root=${AUTOLITH_SBCL_SOURCE_ROOT:-}
+configured_sbcl=${AUTOLITH_SBCL:-}
+recorded_runtime=
+if [[ -r "$runtime_command_path" ]]; then
+  IFS= read -r recorded_runtime < "$runtime_command_path" || recorded_runtime=
+fi
+if [[ -n ${AUTOLITH_SBCL:-} ]]; then
+  sbcl_command=$AUTOLITH_SBCL
+elif [[ "$recorded_runtime" == /* && -x "$recorded_runtime" ]]; then
+  sbcl_command=$recorded_runtime
+else
+  sbcl_command=sbcl
+fi
+export AUTOLITH_SBCL=$sbcl_command
+selected_runtime_version=
+if [[ -d "$data_home/autolith/runtimes" ]] &&
+   selected_runtime_probe=$("$sbcl_command" --version 2>/dev/null); then
+  selected_runtime_version=${selected_runtime_probe#SBCL }
+  selected_runtime_version=${selected_runtime_version%% *}
+fi
+runtime_source_root=
+source_identity_path=
+source_identity=
+if [[ -n "$selected_runtime_version" ]]; then
+  runtime_source_root=$data_home/autolith/runtimes/$selected_runtime_version/source
+  source_identity_path=$data_home/autolith/runtimes/$selected_runtime_version/source.identity
+  if [[ -r "$source_identity_path" ]]; then
+    IFS= read -r source_identity < "$source_identity_path" || source_identity=
+  fi
+fi
+source_identity_version=${source_identity%% *}
+source_identity_sha256=${source_identity#* }
+tracked_source_sha256=
+if [[ "$selected_runtime_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ &&
+      -r "$source_checksums_path" ]]; then
+  source_archive_name=sbcl-$selected_runtime_version-source.tar.bz2
+  tracked_source_sha256=$(awk -v archive_name="$source_archive_name" \
+    '$2 == archive_name { print $1 }' "$source_checksums_path")
+fi
+if [[ "$inherited_runtime_source_root" == /* &&
+      -f "$inherited_runtime_source_root/version.lisp-expr" ]] &&
+   { [[ -z "$selected_runtime_version" ]] ||
+     grep -Fx "\"$selected_runtime_version\"" \
+       "$inherited_runtime_source_root/version.lisp-expr" >/dev/null; }; then
+  export AUTOLITH_SBCL_SOURCE_ROOT=$inherited_runtime_source_root
+elif [[ -n "$runtime_source_root" &&
+      -n "$tracked_source_sha256" &&
+      "$source_identity_version" == "$selected_runtime_version" &&
+      "$source_identity_sha256" == "$tracked_source_sha256" &&
+      -f "$runtime_source_root/version.lisp-expr" ]] &&
+   grep -Fx "\"$source_identity_version\"" \
+     "$runtime_source_root/version.lisp-expr" >/dev/null; then
+  export AUTOLITH_SBCL_SOURCE_ROOT=$runtime_source_root
+else
+  unset AUTOLITH_SBCL_SOURCE_ROOT
+fi
+recovery_core=${AUTOLITH_RECOVERY_CORE:-$data_home/autolith/recovery/autolith-recovery.core}
+recovery_manifest=$(dirname -- "$recovery_core")/manifest.sexp
+active_core=${AUTOLITH_ACTIVE_CORE:-$data_home/autolith/active/autolith-active.core}
+active_manifest=$(dirname -- "$active_core")/manifest.sexp
+crash_pointer=
+recovery_session_pointer=
+
+for argument in "$@"; do
+  case "$argument" in
+    --recovery)
+      recovery_requested=true
+      ;;
+    --from-source)
+      from_source_requested=true
+      ;;
+    *)
+      remaining_arguments+=("$argument")
+      ;;
+  esac
+done
+
+if [[ -t 0 ]]; then
+  terminal_state=$(stty -g 2>/dev/null || true)
+fi
+
+launcher_brand=
+launcher_dim=
+launcher_notice=
+launcher_failure=
+launcher_reset=
+if [[ -t 2 && -z ${NO_COLOR:-} ]]; then
+  launcher_brand=$'\033[35;1m'
+  launcher_dim=$'\033[2m'
+  launcher_notice=$'\033[33m'
+  launcher_failure=$'\033[31;1m'
+  launcher_reset=$'\033[0m'
+fi
+
+restore_terminal()
+{
+  if [[ -n "$terminal_state" && -t 0 ]]; then
+    stty "$terminal_state" 2>/dev/null || true
+    printf '\033[?2004l\033[?25h\033[0m' > /dev/tty 2>/dev/null || true
+  fi
+}
+
+finish_launcher()
+{
+  restore_terminal
+  if [[ -n "$crash_pointer" ]]; then
+    rm -f -- "$crash_pointer"
+  fi
+  if [[ -n "$recovery_session_pointer" ]]; then
+    rm -f -- "$recovery_session_pointer"
+  fi
+}
+
+run_recovery()
+{
+  if [[ -f "$recovery_core" && -f "$recovery_manifest" ]] &&
+     grep -Eq '^\(:RECOVERY-IMAGE :VERSION 2([[:space:]]|$)' "$recovery_manifest" &&
+     "$sbcl_command" --noinform --core "$recovery_core" \
+       --end-runtime-options "$source_root" --probe >/dev/null 2>&1; then
+    "$sbcl_command" --noinform --core "$recovery_core" \
+      --end-runtime-options "$source_root" "$@"
+  else
+    printf '%sPristine recovery image is missing or invalid; using source bootstrap.%s %sRun ./script/build-recovery to replace it.%s\n' \
+      "$launcher_notice" "$launcher_reset" "$launcher_dim" "$launcher_reset" >&2
+    "$sbcl_command" --script "$source_root/recovery/launcher.lisp" \
+      "$source_root" "$@"
+  fi
+}
+
+active_image_valid()
+{
+  [[ -f "$active_core" && -f "$active_manifest" ]] &&
+     grep -Eq '^\(:ACTIVE-IMAGE :VERSION 1([[:space:]]|$)' "$active_manifest" &&
+     "$sbcl_command" --noinform --core "$active_core" \
+       --end-runtime-options "$source_root" \
+       --autolith-internal-active-image-probe >/dev/null 2>&1
+}
+
+run_active_core()
+{
+  "$sbcl_command" --noinform --core "$active_core" \
+    --end-runtime-options "$source_root" "$@"
+}
+
+run_active_source()
+{
+  "$sbcl_command" --script "$source_root/bin/autolith-active" "$@"
+}
+
+refresh_runtime_command()
+{
+  local installed_runtime=
+
+  if [[ -r "$runtime_command_path" ]]; then
+    IFS= read -r installed_runtime < "$runtime_command_path" || installed_runtime=
+  fi
+  if [[ "$installed_runtime" == /* && -x "$installed_runtime" ]]; then
+    sbcl_command=$installed_runtime
+    export AUTOLITH_SBCL=$sbcl_command
+  fi
+}
+
+bootstrap_active_image()
+{
+  local bootstrap_status
+
+  if [[ -n "$configured_sbcl" ]]; then
+    AUTOLITH_SBCL="$configured_sbcl" "$source_root/script/bootstrap"
+  else
+    env -u AUTOLITH_SBCL "$source_root/script/bootstrap"
+  fi
+  bootstrap_status=$?
+  if [[ "$bootstrap_status" -ne 0 ]]; then
+    printf '%sAutolith bootstrap failed with status %d.%s\n' \
+      "$launcher_failure" "$bootstrap_status" "$launcher_reset" >&2
+    return 64
+  fi
+  refresh_runtime_command
+  if ! active_image_valid; then
+    printf '%sAutolith bootstrap completed without a usable fast startup image.%s\n' \
+      "$launcher_failure" "$launcher_reset" >&2
+    return 64
+  fi
+  return 0
+}
+
+offer_bootstrap()
+{
+  local answer=
+
+  while true; do
+    printf '%sAutolith%s fast startup image is missing or stale. Run %s"%s/script/bootstrap"%s now? [Y/n] ' \
+      "$launcher_brand" "$launcher_reset" \
+      "$launcher_dim" "$source_root" "$launcher_reset" >&2
+    if ! IFS= read -r answer; then
+      answer=n
+    fi
+    case "$answer" in
+      ''|y|Y|yes|YES|Yes)
+        bootstrap_active_image
+        return $?
+        ;;
+      n|N|no|NO|No)
+        return 1
+        ;;
+      *)
+        printf '%sPlease answer yes or no.%s\n' \
+          "$launcher_dim" "$launcher_reset" >&2
+        ;;
+    esac
+  done
+}
+
+run_active()
+{
+  export AUTOLITH_SOURCE_ROOT="$source_root"
+  if [[ "$from_source_requested" == true ]]; then
+    run_active_source "$@"
+  elif active_image_valid; then
+    run_active_core "$@"
+  elif [[ -t 0 && -t 2 ]]; then
+    if offer_bootstrap; then
+      run_active_core "$@"
+    else
+      status=$?
+      if [[ "$status" -eq 64 ]]; then
+        return 64
+      fi
+      printf '%sLoading Autolith from source.%s\n' \
+        "$launcher_dim" "$launcher_reset" >&2
+      run_active_source "$@"
+    fi
+  else
+    run_active_source "$@"
+  fi
+}
+
+trap finish_launcher EXIT HUP INT TERM
+
+if [[ "$recovery_requested" == true ]]; then
+  restore_terminal
+  run_recovery ${remaining_arguments[@]+"${remaining_arguments[@]}"}
+  exit $?
+fi
+
+crash_pointer_directory="$state_home/autolith/crash-pointers"
+mkdir -p -- "$crash_pointer_directory"
+chmod 700 "$crash_pointer_directory"
+crash_pointer="$crash_pointer_directory/launcher-$$.path"
+rm -f -- "$crash_pointer"
+export AUTOLITH_CRASH_POINTER="$crash_pointer"
+
+recovery_session_pointer_directory="$state_home/autolith/recovery-session-pointers"
+mkdir -p -- "$recovery_session_pointer_directory"
+chmod 700 "$recovery_session_pointer_directory"
+recovery_session_pointer="$recovery_session_pointer_directory/launcher-$$.sexp"
+rm -f -- "$recovery_session_pointer"
+export AUTOLITH_RECOVERY_SESSION_POINTER="$recovery_session_pointer"
+
+if run_active ${remaining_arguments[@]+"${remaining_arguments[@]}"}; then
+  exit 0
+else
+  status=$?
+fi
+
+restore_terminal
+
+if [[ "$status" -ne 64 && "$status" -ne 76 &&
+      "$status" -ne 130 && "$status" -ne 143 ]]; then
+  capsule=
+  if [[ -f "$crash_pointer" ]]; then
+    IFS= read -r capsule < "$crash_pointer" || capsule=
+    case "$capsule" in
+      "$state_home/autolith/crashes/"*.sexp)
+        if [[ ! -f "$capsule" ]]; then
+          capsule=
+        fi
+        ;;
+      *)
+        capsule=
+        ;;
+    esac
+  fi
+  recovery_arguments=("--status" "$status")
+  if [[ -n "$capsule" ]]; then
+    recovery_arguments+=("--capsule" "$capsule")
+  fi
+  for argument in ${remaining_arguments[@]+"${remaining_arguments[@]}"}; do
+    recovery_arguments+=("--original-argument" "$argument")
+  done
+  recovery_arguments+=("--" ${remaining_arguments[@]+"${remaining_arguments[@]}"})
+  run_recovery "${recovery_arguments[@]}"
+  exit $?
+fi
+
+exit "$status"

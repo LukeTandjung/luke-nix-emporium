@@ -1,0 +1,219 @@
+#+TITLE: Autolith Architecture
+#+STARTUP: content
+
+Autolith is a terminal agent in a live Common Lisp image. The running
+system can be inspected and changed by both the agent, and the user.
+
+All application definitions live in the single =autolith= package,
+which may be considered non-standard or unwise by some Common Lisp
+developers, but I consider correct for self-modifiability.
+
+* System
+
+#+BEGIN_SRC text
+                         +--------------------+
+                         | stable launcher    |
+                         | provenance checks  |
+                         +---------+----------+
+                                   |
+                    +--------------v---------------+
+                    | active Autolith Lisp image    |
+                    | terminal, agent, tools, state |
+                    +--+-----------+-----------+----+
+                       |           |           |
+              +--------v--+   +----v----+  +---v----------------+
+              | provider  |   | durable |  | isolated workers    |
+              | HTTP/SSE  |   | records |  | search and lisp.*   |
+              +-----------+   +----+----+  +---------------------+
+                                  |
+                    +-------------v--------------+
+                    | XDG data and state roots    |
+                    | conversations, memories,    |
+                    | agendas, images, credentials|
+                    +----------------------------+
+#+END_SRC
+
+- The *stable launcher* checks runtime and source provenance, then starts
+  the active image or recovery
+- The *active image* operates the session: input, provider turns, tools, and
+  the live terminal region
+- *Workers* handle search (the special fff worker) and =lisp.*= REPLs.
+  They live in separate Lisp images and cannot directly modify the agent.
+- *Durable records* live under reasonable XDG folders. This roughly includes
+  conversations, memories, agendas, images, and credentials
+- The *recovery image* is a separately built pristine core, which Autolith
+  will reboot into in case the current image is FUBAR. Autolith can work
+  using the recovery image to either fix figure out the issue with your
+  current image, or try to finish your task if that's a priority.
+
+* Agent turns
+
+#+BEGIN_SRC text
+user input
+   |
+   v
+responsive reader --> application operation --> agent turn
+   |                         |                    |
+   |                         |                    +--> provider stream
+   |                         |                    +--> tool batches
+   |                         |                    +--> durable records
+   v                         v
+terminal prompt          local Lisp result       finalized scrollback
+#+END_SRC
+
+- The reader classifies prose, explicit Lisp, and callable operations
+- The application evaluates one top-level form and shows values, output,
+  conditions, and restarts
+- =src/agent/runtime.lisp= runs one model turn at a time
+- User input is persisted first before we do anything else
+- Context pressure triggers inline durable compaction
+- Local operations that dont conflict with a turn can run immediately
+- Modal, terminal-owning, authorization-gated etc actions wait for a safe point
+
+* User state
+
+Autolith stores portable, readable S-expressions (for now, it is possible we migrate
+to sqlite or similar in the future).
+
+The library we use is =sexp-store=,
+
+| State         | Components                                               |
+|---------------+----------------------------------------------------------|
+| Conversations | headers, messages, provider items, model choices         |
+| Memories      | workspace and global facts, replacement and recall tombs |
+| Agendas       | versioned workspace plans and memory identifiers         |
+| Papercuts     | user-visible defect reports and closure tombstones       |
+| Input vault   | queued follow-ups and steering after a crash             |
+
+- Conversation records are authoritative provider history
+- The header records the selected model and effort. Later changes are
+  durable configuration records, so resume restores the latest choices
+- Identifiers use =idsmall= Base58 IDs, which are not the most secure, but they encode a timestamp and are short enough that
+  you can at least remember the prefix.
+
+* Provider and tools
+
+- =src/provider/client.lisp= describes replaceable provider protocol,
+  encoding, HTTP, and SSE. It emits semantic stream events,
+  which are processed by our rendering machinery et al.
+- Tools have metadata, namespaces, validation, and a result for every
+  call, including failed ones
+- =src/tools/defaults.lisp= assembles the registry
+
+#+BEGIN_SRC text
+provider request --> semantic events --> agent --> validated tool calls
+                                             |
+                                             +--> matching tool results
+#+END_SRC
+
+- Configuration records credential *locations* only
+- A provider request sees tokens only in its dynamic scope
+- The optional Codex file is a one-time access-token import
+- Renewable credentials come from Autolith's own device flow
+
+* Workspace and workers
+
+- Workspace operations use one policy. =cl-exec-sandbox= picks the
+  backend based on operating system:
+  - Bubblewrap on Linux
+  - Seatbelt via =sandbox-exec= on macOS
+- The default policy we select is:
+  - no network
+  - host read-only
+  - workspace and temp writes,
+  - repository .git metadata is protected
+  - 60 second default timeout
+- Search is one supervised native helper per fff registry.
+- =lisp.*= operations run in named persistent SBCL subprocesses.
+- Worker images never participate in active startup or recovery
+- =sexp-config= reads skills, MCP configuration, child roles, etc.
+- Tasks use =cl-jobpond= for admission, threads, deadlines, and
+  cancellation.
+
+* Terminal
+
+Autolith uses the primary screen and leaves finalized output in normal
+scrollback.
+
+Only a bounded live region is repainted at the bottom.
+
+- Reasoning previews enter scrollback only once finalized
+- Autolith provides semantic styling, candidate policy, terminal mode, and
+  emits OSC 133 prompt blocks
+- OSC 133: =A= and =B= precede input, =C= starts execution, =D;STATUS=
+  closes execution. This way you can rely on smarter terminals
+- Clinedi owns editor state, input decoding, geometry, and live
+  repainting
+- cl-colorist is used for ANSI capability detection
+- Text is sanitized before styles are added
+- Ctrl-C on an empty prompt exits.
+
+* Live mutation and generations
+
+The =self.*= tools can inspect the active image and install a complete definition.
+
+#+BEGIN_SRC text
+journal proposal
+   |
+   v
+compile and install --> checks --> replay script and manifest
+                                              |
+                                              v
+                                  private mutation-history Git commit
+                                              |
+                                              v
+                                  atomically select normal startup state
+                                              |
+                                              v
+                                      journal durable result
+#+END_SRC
+
+- Exploratory changes stop after install and journal publication
+- =self.diff= shows effective state. =self.exercise= records focused
+  evidence. =self.discard= reverses one effective change
+- =self.commit= creates a private snapshot, replay-probes it, commits it
+  to the separate mutation-history repository, and atomically selects it
+- Checkpoints use =sbcl-generations=. Before the fork, Autolith quiesces
+  work, clears credentials, detaches workers, and checks provenance
+
+* Startup, update, and recovery
+
+#+BEGIN_SRC text
+stable launcher
+   |
+   +--> verify runtime and source provenance --> active image
+   |                                               |
+   |                                               +--> retained generation
+   |
+   +--> failure or rollback --> recovery --> compatible generation
+                                      |
+                                      +--> clean exact-source checkout
+#+END_SRC
+
+- =active-image.lisp= builds the preloaded image for normal startup
+- =script/bootstrap= finds a supported SBCL, builds the pristine recovery
+  core and a separate active image, and boot-probes both
+- Updates validate provenance and refresh a readable availability cache.
+  Startup reads cached state only. An accepted packaged update runs the
+  bundled installer and restarts. 
+- Recovery reports sanitized crash context. It tries compatible retained cores,
+  then checkout of current committed source if all else fails
+
+* Source map
+
+Here's a rough, probably outdated map of the repository
+
+| Area                          | Primary source boundaries and dependencies                                                   |
+|-------------------------------+----------------------------------------------------------------------------------------------|
+| Application loop              | =src/startup/=, =src/agent/=, =src/application/=, =src/terminal/responsive-input.lisp=               |
+| Terminal                      | =src/terminal/=, Clinedi, cl-colorist                                                          |
+| Providers and credentials     | =src/provider/=                                                                                |
+| Tools and workspace resources | =src/tools/=, =src/resource/=, cl-exec-sandbox, clifff                                           |
+| Readable durable state        | =src/conversation/=, =src/state/=, =src/resource/{memory,agenda}.lisp=, sexp-store                 |
+| Workers and tasks             | =src/workers/=, =src/task/=, cl-jobpond, sbcl-workers                                            |
+| Live mutation                 | =src/self/=, =src/state/{durable-mutations,image-commits}.lisp=                                  |
+| Images and recovery           | =src/startup/active-image.lisp=, =src/state/generations.lisp=, =recovery/=, =bin/=, sbcl-generations |
+| Configuration and transfer    | =src/configuration/=, =src/localgroup/=, =src/state/updates.lisp=, sexp-config                     |
+
+Read [[file:guide.org][the guide]] for operating Autolith, and =AGENTS.md= for
+repository rules and development policy, especially using clankers.

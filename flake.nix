@@ -3,11 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    autolith.url = "path:./vendor/autolith";
   };
 
   outputs =
     {
       self,
+      autolith,
       nixpkgs,
       ...
     }:
@@ -37,14 +39,20 @@
           pencil = pkgs.callPackage ./pkgs/pencil { };
           pi = pkgs.callPackage ./pkgs/pi { };
           pi_quint_toolchain = pkgs.callPackage ./pkgs/quint-toolchain { };
+          autolith_paddle_ocr_mcp = pkgs.callPackage ./pkgs/autolith-paddle-ocr-mcp { };
           terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
           default = self.packages.${system}.leetgpu_cli;
-        } // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+        }
+        // pkgs.lib.optionalAttrs (builtins.hasAttr system autolith.packages) {
+          autolith = autolith.packages.${system}.autolith;
+        }
+        // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           claude_desktop = pkgs.callPackage ./pkgs/claude-desktop { };
         }
       );
 
       homeManagerModules = {
+        autolith = import ./modules/autolith.nix { inherit autolith; };
         bookokrat = import ./modules/bookokrat.nix;
         claude-code = import ./modules/claude-code.nix;
         claude-desktop = import ./modules/claude-desktop.nix;
@@ -53,6 +61,7 @@
         pi = import ./modules/pi.nix;
         default = {
           imports = [
+            self.homeManagerModules.autolith
             self.homeManagerModules.bookokrat
             self.homeManagerModules.claude-code
             self.homeManagerModules.claude-desktop

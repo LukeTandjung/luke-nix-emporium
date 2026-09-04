@@ -18,8 +18,8 @@ in
         type = "stdio";
       };
 
-      # Keep skills and agent instructions in one place for both agents.
-      skills = ../pkgs/pi/skills;
+      # Keep skills and agent instructions in one place for all agents.
+      skills = ../pkgs/agent-skills;
       context = builtins.readFile ../pkgs/pi/context/AGENTS.md;
     };
   };
