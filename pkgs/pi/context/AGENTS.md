@@ -33,11 +33,6 @@ and the documentation related to it.
 
 Be concise in your replies.
 
-# Workflow Rules
-
-Feature implementation is split into two separate parts: frontend and backend.
-Use the `/frontend-feature` or `/backend-feature` prompts to get the full checklist for each.
-
 # Available CLI Utilities
 
 The following CLI utilities are available and may be used when helpful: `ast-grep`, `fastmod`, `fzf`, `gh`, `jq`, `ripgrep` (`rg`), and `tree`.
@@ -51,8 +46,5 @@ The following CLI utilities are available and may be used when helpful: `ast-gre
 not "import ... from './file'".
 - All arrays should be defined as Array<type>, not type[].
 - Do not use type assertions (... as type).
-- Unless stated otherwise, Typescript is only used in the React frontend. Furthermore, we heavily make use of two libraries to write it:
-  the BaseUI Headless Component Library and Effect-TS. Use the fetch-llms-txt skill when working with these libraries.
-  For Effect-TS, use the effect-docs skill to fetch documentation.
-- If Typescript is used for the Bun backend, we will use Elysia.js and Effect-TS. Use the fetch-llms-txt skill when
-  working with these libraries. For Effect-TS, use the effect-docs skill to fetch documentation.
+- Unless stated otherwise, TypeScript is only used in the React frontend. The frontend uses the BaseUI Headless Component Library and Effect-TS. For Effect-TS, use the effect-docs skill to fetch documentation.
+- If TypeScript is used for the Bun backend, use Elysia.js and Effect-TS. For Effect-TS, use the effect-docs skill to fetch documentation.
