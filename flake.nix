@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    autolith.url = "path:./vendor/autolith";
+    autolith.url = "github:luciusmagn/autolith/v0.40.1";
   };
 
   outputs =

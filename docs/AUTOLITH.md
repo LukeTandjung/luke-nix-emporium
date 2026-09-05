@@ -1,10 +1,9 @@
 # Autolith
 
-This repository vendors the exact Autolith source used to build the base image. It manages the user configuration through Home Manager.
+This repository pins the Autolith package as a flake input. It stores the user configuration that Home Manager installs.
 
 ## Contents
 
-- `vendor/autolith`: pinned Autolith source and its Nix build
 - `pkgs/agent-skills`: shared `SKILL.md` sources for Autolith, Pi, and Claude Code
 - `pkgs/autolith/init.lisp`: global executable initialization
 - `pkgs/autolith/mcp.nix`: generated MCP configuration
@@ -12,7 +11,7 @@ This repository vendors the exact Autolith source used to build the base image. 
 - `pkgs/markitdown-mcp`: Nix package for the upstream Microsoft document conversion MCP server
 - `modules/autolith.nix`: Home Manager module
 
-Generated SBCL core files and private mutation history are not committed. Nix builds the base image from the vendored source. Committed configuration reconstructs the local extensions.
+Generated SBCL core files and private mutation history are not committed. Nix builds the base image from the locked upstream Autolith source. The committed Home Manager module, initialization source, MCP configuration, skills, and agent definitions reconstruct the local configuration.
 
 ## Home Manager
 
@@ -56,13 +55,11 @@ pkgs/agent-skills/release-check/
 
 The Pi, Claude Code, and Autolith modules all use this directory. Autolith reads standard `SKILL.md` files directly.
 
-## Native tools and skills
-
-The vendored Autolith image includes `user.ask`. It presents one to four multiple-choice questions through the terminal selector. The tool is not available to child agents.
+## Skills
 
 The shared `autoresearch` skill defines measured Git experiments under `.auto/`. The `document-parsing` skill selects MarkItDown for document conversion and PaddleOCR for visual OCR.
 
-Source-level Autolith changes belong under `vendor/autolith` with tests. Configure external tools as upstream MCP packages when they are available.
+Make source-level Autolith changes in the upstream Autolith repository with tests. Configure external tools as upstream MCP packages when they are available.
 
 ## PaddleOCR
 
@@ -78,12 +75,12 @@ The upstream MarkItDown server provides `convert_to_markdown`. It converts local
 
 The tool can read files available to the Autolith process and can fetch remote URLs. Autolith prompts for approval by default. Set `programs.autolith.document.approval = "read-only"` to trust `convert_to_markdown` without a prompt.
 
-## Update the vendored base
+## Update the Autolith package
 
-Replace `vendor/autolith` with a reviewed source snapshot. Update `vendor/autolith/VENDORED_COMMIT`, then run:
+Change the Autolith release tag in `flake.nix`. Then update the lock file and run the checks:
 
 ```bash
-nix flake lock --update-input autolith
+nix flake update autolith
 nix flake check
 ```
 

@@ -6,14 +6,19 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "path": "./vendor/autolith",
-        "type": "path"
+        "lastModified": 1787671081,
+        "narHash": "sha256-5RtNqSdaahweI9lgcBaEXhPfCtduVgNkTGOA0RcHyvE=",
+        "owner": "luciusmagn",
+        "repo": "autolith",
+        "rev": "83755ca231423831e75f5d9e61dbfa114e76fed1",
+        "type": "github"
       },
       "original": {
-        "path": "./vendor/autolith",
-        "type": "path"
-      },
-      "parent": []
+        "owner": "luciusmagn",
+        "ref": "v0.40.1",
+        "repo": "autolith",
+        "type": "github"
+      }
     },
     "flake-parts": {
       "inputs": {
