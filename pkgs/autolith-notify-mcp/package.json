@@ -1,0 +1,20 @@
+{
+  "name": "autolith-notify-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stdio MCP server for native desktop notifications",
+  "bin": {
+    "autolith-notify-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.25.2"
+  }
+}

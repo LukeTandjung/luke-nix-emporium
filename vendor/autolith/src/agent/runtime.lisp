@@ -56,7 +56,13 @@
     :initform nil
     :reader callback-agent-observer-tool-authorization-callback
     :type (option function)
-    :documentation "The optional function authorizing one external tool call."))
+    :documentation "The optional function authorizing one external tool call.")
+   (ask-user-callback
+    :initarg :ask-user-callback
+    :initform nil
+    :reader callback-agent-observer-ask-user-callback
+    :type (option function)
+    :documentation "The optional function that asks bounded structured user questions."))
   (:documentation "An agent observer implemented by ordinary terminal-facing callbacks."))
 
 (defclass serialized-agent-observer (agent-observer)
@@ -189,6 +195,10 @@
 (defgeneric agent-observer-authorize-tool (observer tool arguments)
   (:documentation "Return :ALLOW or :DENY for external TOOL and ARGUMENTS."))
 
+(-> agent-observer-ask-user (agent-observer list) list)
+(defgeneric agent-observer-ask-user (observer questions)
+  (:documentation "Ask bounded QUESTIONS through OBSERVER and return selected answers."))
+
 (defmethod agent-observer-text ((observer agent-observer) (text string))
   "Ignore assistant TEXT for the default silent OBSERVER."
   (declare (ignore observer text))
@@ -235,6 +245,11 @@
   "Deny TOOL when OBSERVER has no authorization interface."
   (declare (ignore observer tool arguments))
   ':deny)
+
+(defmethod agent-observer-ask-user ((observer agent-observer) questions)
+  "Return no answers when OBSERVER has no interactive user interface."
+  (declare (ignore observer questions))
+  nil)
 
 (defmethod agent-observer-text ((observer callback-agent-observer) (text string))
   "Send assistant TEXT to OBSERVER's configured callback."
@@ -306,6 +321,11 @@
         (funcall callback tool arguments)
         ':deny)))
 
+(defmethod agent-observer-ask-user ((observer callback-agent-observer) questions)
+  "Ask QUESTIONS through OBSERVER's configured callback."
+  (let ((callback (callback-agent-observer-ask-user-callback observer)))
+    (and callback (funcall callback questions))))
+
 (defmethod agent-observer-text
     ((observer serialized-agent-observer) (text string))
   "Forward assistant TEXT to OBSERVER's delegate under its callback lock."
@@ -367,6 +387,12 @@
     (agent-observer-authorize-tool
      (serialized-agent-observer-delegate observer) tool arguments)))
 
+(defmethod agent-observer-ask-user ((observer serialized-agent-observer) questions)
+  "Ask QUESTIONS through OBSERVER's delegate under its callback lock."
+  (with-recursive-lock-held ((serialized-agent-observer-lock observer))
+    (agent-observer-ask-user
+     (serialized-agent-observer-delegate observer) questions)))
+
 
 ;;;; -- Construction and Turn Entry --
 
@@ -389,12 +415,14 @@
      (:steering-persisted-callback (option function))
      (:pending-operations-callback (option function))
      (:command-authorization-callback (option function))
-     (:tool-authorization-callback (option function)))
+     (:tool-authorization-callback (option function))
+     (:ask-user-callback (option function)))
     callback-agent-observer)
 (defun callback-agent-observer-create
     (&key text-callback reasoning-callback status-callback steering-callback
       steering-persisted-callback pending-operations-callback
-      command-authorization-callback tool-authorization-callback)
+      command-authorization-callback tool-authorization-callback
+      ask-user-callback)
   "Create an observer backed by optional presentation callbacks."
   (make-instance 'callback-agent-observer
                  :text-callback text-callback
@@ -403,9 +431,9 @@
                  :steering-callback steering-callback
                  :steering-persisted-callback steering-persisted-callback
                  :pending-operations-callback pending-operations-callback
-                 :command-authorization-callback
-                 command-authorization-callback
-                 :tool-authorization-callback tool-authorization-callback))
+                 :command-authorization-callback command-authorization-callback
+                 :tool-authorization-callback tool-authorization-callback
+                 :ask-user-callback ask-user-callback))
 
 (-> agent-create
     (&key

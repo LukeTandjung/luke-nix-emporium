@@ -225,6 +225,8 @@
     (test-memory-resource-mutations)
     (test-papercut-resources)
     (test-tool-registry)
+    (test-user-ask-tool)
+    (test-user-ask-application)
     (test-workspace-tools)
     (test-search-tools)
     (test-lisp-image-manifests)

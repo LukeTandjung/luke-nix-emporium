@@ -722,6 +722,47 @@
       (default-tools--register registry specification)))
   registry)
 
+(-> default-tools--register-user (tool-registry) tool-registry)
+(defun default-tools--register-user (registry)
+  "Register the bounded interactive user question tool in REGISTRY."
+  (default-tools--register
+   registry
+   (list
+    'user-ask-tool
+    "user" "ask"
+    "Ask the local user 1 to 4 multiple-choice questions. Use this only when the answers are needed to continue."
+    (tool-object-schema
+     (json-object
+      "questions"
+      (json-object
+       "type" "array"
+       "description" "The questions to show in order."
+       "minItems" 1
+       "maxItems" 4
+       "items"
+       (tool-object-schema
+        (json-object
+          "question" (json-object
+                      "type" "string"
+                      "minLength" 1
+                       "maxLength" +user-ask-question-character-limit+
+                      "description" "The question shown to the user.")
+          "options"
+          (json-object
+           "type" "array"
+           "description" "Two to four unique answer options."
+           "minItems" 2
+           "maxItems" 4
+           "uniqueItems" t
+           "items" (json-object
+                    "type" "string"
+                    "minLength" 1
+                     "maxLength" +user-ask-option-character-limit+
+                    "description" "One non-empty answer option.")))
+        '("question" "options"))))
+     '("questions"))))
+  registry)
+
 (-> default-tools--remove-mutable-self-tools (tool-registry) tool-registry)
 (defun default-tools--remove-mutable-self-tools (registry)
   "Remove every mutable active-image tool from REGISTRY."
@@ -742,6 +783,7 @@
     (default-tools--register-agenda registry)
     (default-tools--register-plan registry)
     (default-tools--register-lisp registry)
+    (default-tools--register-user registry)
     (default-tools--register-self registry)
     (rlm-register-tools registry)
     (skill-augment-tool-registry registry)

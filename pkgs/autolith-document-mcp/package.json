@@ -1,0 +1,21 @@
+{
+  "name": "autolith-document-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Workspace-scoped document tools for Autolith over stdio MCP",
+  "bin": {
+    "autolith-document-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@llamaindex/liteparse": "2.10.1",
+    "@modelcontextprotocol/sdk": "1.25.2"
+  }
+}

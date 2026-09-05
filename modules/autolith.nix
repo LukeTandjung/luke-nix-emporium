@@ -4,6 +4,7 @@
 let
   cfg = config.programs.autolith;
   pathOrLines = lib.types.either lib.types.path lib.types.lines;
+  approvalType = lib.types.enum [ "prompt" "read-only" "allow" "deny" ];
   skillsDir = ../pkgs/agent-skills;
   defaultSkills = lib.mapAttrs
     (name: _: skillsDir + "/${name}")
@@ -14,10 +15,18 @@ let
     else throw "Autolith does not provide a package for ${pkgs.system}";
   quintToolchain = pkgs.callPackage ../pkgs/quint-toolchain { };
   paddleOcrPackage = cfg.paddleOcr.package;
+  documentPackage = cfg.document.package;
+  notifyPackage = cfg.notifications.package;
+  mcpEnabled = cfg.paddleOcr.enable || cfg.document.enable || cfg.notifications.enable;
   mcpConfig = import ../pkgs/autolith/mcp.nix {
-    inherit lib paddleOcrPackage;
-    approval = cfg.paddleOcr.approval;
+    inherit lib;
+    paddleOcrPackage = if cfg.paddleOcr.enable then paddleOcrPackage else null;
+    paddleOcrApproval = cfg.paddleOcr.approval;
     endpointEnvironmentVariable = cfg.paddleOcr.endpointEnvironmentVariable;
+    documentPackage = if cfg.document.enable then documentPackage else null;
+    documentApproval = cfg.document.approval;
+    notifyPackage = if cfg.notifications.enable then notifyPackage else null;
+    notifyApproval = cfg.notifications.approval;
   };
   fileValue = value:
     if builtins.isPath value
@@ -76,7 +85,7 @@ in
       };
 
       approval = lib.mkOption {
-        type = lib.types.enum [ "prompt" "read-only" "allow" "deny" ];
+        type = approvalType;
         default = "prompt";
         description = "Autolith approval policy for the PaddleOCR MCP server.";
       };
@@ -86,6 +95,42 @@ in
         default = null;
         example = "PADDLE_OCR_URL";
         description = "Optional parent environment variable passed to the OCR server as PADDLE_OCR_URL.";
+      };
+    };
+
+    document = {
+      enable = lib.mkEnableOption "the workspace document parsing MCP tools" // {
+        default = true;
+      };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.callPackage ../pkgs/autolith-document-mcp { };
+        description = "The LiteParse document MCP server package.";
+      };
+
+      approval = lib.mkOption {
+        type = approvalType;
+        default = "prompt";
+        description = "Autolith approval policy for the document MCP server.";
+      };
+    };
+
+    notifications = {
+      enable = lib.mkEnableOption "the native desktop notification MCP tool" // {
+        default = true;
+      };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.callPackage ../pkgs/autolith-notify-mcp { };
+        description = "The native notification MCP server package.";
+      };
+
+      approval = lib.mkOption {
+        type = lib.types.enum [ "prompt" "allow" "deny" ];
+        default = "prompt";
+        description = "Autolith approval policy for the notification MCP server.";
       };
     };
   };
@@ -101,7 +146,9 @@ in
 
     home.packages = [ cfg.package ]
       ++ cfg.extraPackages
-      ++ lib.optional cfg.paddleOcr.enable paddleOcrPackage;
+      ++ lib.optional cfg.paddleOcr.enable paddleOcrPackage
+      ++ lib.optional cfg.document.enable documentPackage
+      ++ lib.optional cfg.notifications.enable notifyPackage;
 
     xdg.configFile = lib.mkMerge [
       (lib.optionalAttrs (cfg.init != null) {
@@ -125,7 +172,7 @@ in
         lib.nameValuePair "autolith/agents/${name}.sexp" (fileValue value)
       ) cfg.agents)
 
-      (lib.optionalAttrs cfg.paddleOcr.enable {
+      (lib.optionalAttrs mcpEnabled {
         "autolith/mcp.sexp".text = mcpConfig;
       })
     ];

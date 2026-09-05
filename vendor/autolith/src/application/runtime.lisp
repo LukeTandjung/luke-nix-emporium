@@ -2817,6 +2817,35 @@ remain finalized so later conversation replay cannot duplicate streamed rows."
             ':strong
             (sanitize-text name :single-line-p t)))))))
 
+(-> application-ask-user (application list) list)
+(defun application-ask-user (application questions)
+  "Ask normalized QUESTIONS with the active terminal picker and return answers."
+  (let ((ui (and (slot-boundp application 'ui) (application-ui application))))
+    (unless (and (typep ui 'terminal-ui)
+                 (terminal-interactive-p (terminal-ui-terminal ui)))
+      (return-from application-ask-user nil))
+    (labels ((ask-all ()
+               "Select one answer for each question, stopping on cancellation."
+               (loop for question in questions
+                     for answer =
+                       (terminal-ui-select
+                        ui
+                        :title (getf question :question)
+                        :items
+                        (mapcar (lambda (option)
+                                  (list :name option :value option))
+                                (getf question :options))
+                        :hint "enter selects, esc cancels"
+                        :visible-count 4
+                        :resize-callback #'application-pending-terminal-size)
+                     unless answer do (return nil)
+                     collect answer)))
+      (let ((controller (application-input-controller application)))
+        (if controller
+            (application-input-controller-call-with-reader-paused
+             controller #'ask-all)
+            (ask-all))))))
+
 (-> application-agent-observer
     (application
      &key (:steering-function (option function))
@@ -3059,9 +3088,12 @@ remain finalized so later conversation replay cannot duplicate streamed rows."
        :command-authorization-callback
        (lambda (command directory)
          (application-authorize-command application command directory))
-       :tool-authorization-callback
-       (lambda (tool arguments)
-         (application-authorize-tool application tool arguments))))))
+        :tool-authorization-callback
+        (lambda (tool arguments)
+          (application-authorize-tool application tool arguments))
+        :ask-user-callback
+        (lambda (questions)
+          (application-ask-user application questions))))))
 
 ;;;; -- Session Titles --
 
