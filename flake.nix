@@ -45,7 +45,10 @@
           default = self.packages.${system}.leetgpu_cli;
         }
         // pkgs.lib.optionalAttrs (builtins.hasAttr system autolith.packages) {
-          autolith = autolith.packages.${system}.autolith;
+          autolith = import ./pkgs/autolith/package.nix {
+            inherit pkgs;
+            autolithSource = autolith;
+          };
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           claude_desktop = pkgs.callPackage ./pkgs/claude-desktop { };

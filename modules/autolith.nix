@@ -11,7 +11,10 @@ let
     (lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsDir));
   defaultPackage =
     if builtins.hasAttr pkgs.system autolith.packages
-    then autolith.packages.${pkgs.system}.autolith
+    then import ../pkgs/autolith/package.nix {
+      inherit pkgs;
+      autolithSource = autolith;
+    }
     else throw "Autolith does not provide a package for ${pkgs.system}";
   quintToolchain = pkgs.callPackage ../pkgs/quint-toolchain { };
   paddleOcrPackage = cfg.paddleOcr.package;

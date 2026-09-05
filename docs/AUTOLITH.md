@@ -6,6 +6,8 @@ This repository pins the Autolith package as a flake input. It stores the user c
 
 - `pkgs/agent-skills`: shared `SKILL.md` sources for Autolith, Pi, and Claude Code
 - `pkgs/autolith/init.lisp`: global executable initialization
+- `pkgs/autolith/package.nix`: patched package builder for the locked upstream source
+- `pkgs/autolith/patches`: focused source changes applied before the base image build
 - `pkgs/autolith/mcp.nix`: generated MCP configuration
 - `pkgs/autolith-paddle-ocr-mcp`: local PaddleOCR-VL MCP server
 - `pkgs/markitdown-mcp`: Nix package for the upstream Microsoft document conversion MCP server
