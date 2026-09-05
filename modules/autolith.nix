@@ -16,8 +16,7 @@ let
   quintToolchain = pkgs.callPackage ../pkgs/quint-toolchain { };
   paddleOcrPackage = cfg.paddleOcr.package;
   documentPackage = cfg.document.package;
-  notifyPackage = cfg.notifications.package;
-  mcpEnabled = cfg.paddleOcr.enable || cfg.document.enable || cfg.notifications.enable;
+  mcpEnabled = cfg.paddleOcr.enable || cfg.document.enable;
   mcpConfig = import ../pkgs/autolith/mcp.nix {
     inherit lib;
     paddleOcrPackage = if cfg.paddleOcr.enable then paddleOcrPackage else null;
@@ -25,8 +24,6 @@ let
     endpointEnvironmentVariable = cfg.paddleOcr.endpointEnvironmentVariable;
     documentPackage = if cfg.document.enable then documentPackage else null;
     documentApproval = cfg.document.approval;
-    notifyPackage = if cfg.notifications.enable then notifyPackage else null;
-    notifyApproval = cfg.notifications.approval;
   };
   fileValue = value:
     if builtins.isPath value
@@ -99,38 +96,20 @@ in
     };
 
     document = {
-      enable = lib.mkEnableOption "the workspace document parsing MCP tools" // {
+      enable = lib.mkEnableOption "the MarkItDown document conversion MCP tool" // {
         default = true;
       };
 
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.callPackage ../pkgs/autolith-document-mcp { };
-        description = "The LiteParse document MCP server package.";
+        default = pkgs.callPackage ../pkgs/markitdown-mcp { };
+        description = "The Microsoft MarkItDown MCP server package.";
       };
 
       approval = lib.mkOption {
         type = approvalType;
         default = "prompt";
-        description = "Autolith approval policy for the document MCP server.";
-      };
-    };
-
-    notifications = {
-      enable = lib.mkEnableOption "the native desktop notification MCP tool" // {
-        default = true;
-      };
-
-      package = lib.mkOption {
-        type = lib.types.package;
-        default = pkgs.callPackage ../pkgs/autolith-notify-mcp { };
-        description = "The native notification MCP server package.";
-      };
-
-      approval = lib.mkOption {
-        type = lib.types.enum [ "prompt" "allow" "deny" ];
-        default = "prompt";
-        description = "Autolith approval policy for the notification MCP server.";
+        description = "Autolith approval policy for the MarkItDown MCP server.";
       };
     };
   };
@@ -147,8 +126,7 @@ in
     home.packages = [ cfg.package ]
       ++ cfg.extraPackages
       ++ lib.optional cfg.paddleOcr.enable paddleOcrPackage
-      ++ lib.optional cfg.document.enable documentPackage
-      ++ lib.optional cfg.notifications.enable notifyPackage;
+      ++ lib.optional cfg.document.enable documentPackage;
 
     xdg.configFile = lib.mkMerge [
       (lib.optionalAttrs (cfg.init != null) {

@@ -6,7 +6,7 @@ A personal collection of Nix flake packages for software not yet available in ni
 
 | Package | Description |
 |---------|-------------|
-| [Autolith](docs/AUTOLITH.md) | Live Common Lisp agent with shared skills, document tools, OCR, and desktop notifications |
+| [Autolith](docs/AUTOLITH.md) | Live Common Lisp agent with shared skills, document conversion, and OCR |
 | bookokrat | Terminal EPUB/PDF/DJVU reader with Vim-style workflows |
 | claude_code | Agentic coding tool for the terminal |
 | claude_desktop | Claude Desktop app for Linux |

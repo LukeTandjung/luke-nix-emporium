@@ -5,8 +5,6 @@
   endpointEnvironmentVariable ? null,
   documentPackage ? null,
   documentApproval ? "prompt",
-  notifyPackage ? null,
-  notifyApproval ? "prompt",
 }:
 
 let
@@ -55,18 +53,11 @@ let
       transportExtra = endpointEnvironment;
     })
     ++ lib.optional (documentPackage != null) (renderServer {
-      name = "document";
-      command = "${documentPackage}/bin/autolith-document-mcp";
+      name = "markitdown";
+      command = "${documentPackage}/bin/markitdown-mcp";
       approval = documentApproval;
-      tools = [ "document_parse" "document_search" "document_screenshot" ];
-      trustedReadOnlyTools = [ "document_parse" "document_search" "document_screenshot" ];
-    })
-    ++ lib.optional (notifyPackage != null) (renderServer {
-      name = "notify";
-      command = "${notifyPackage}/bin/autolith-notify-mcp";
-      approval = notifyApproval;
-      tools = [ ];
-      timeout = 30;
+      tools = [ "convert_to_markdown" ];
+      trustedReadOnlyTools = [ "convert_to_markdown" ];
     });
 in
 ''
