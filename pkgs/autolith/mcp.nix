@@ -3,8 +3,6 @@
   paddleOcrPackage ? null,
   paddleOcrApproval ? "prompt",
   endpointEnvironmentVariable ? null,
-  documentPackage ? null,
-  documentApproval ? "prompt",
 }:
 
 let
@@ -43,22 +41,14 @@ let
     '';
   endpointEnvironment = lib.optionalString (endpointEnvironmentVariable != null)
     "\n      :environment ((\"PADDLE_OCR_URL\" :environment \"${endpointEnvironmentVariable}\"))";
-  servers =
-    lib.optional (paddleOcrPackage != null) (renderServer {
-      name = "paddle-ocr";
-      command = "${paddleOcrPackage}/bin/autolith-paddle-ocr-mcp";
-      approval = paddleOcrApproval;
-      tools = [ "paddle_ocr" ];
-      trustedReadOnlyTools = [ "paddle_ocr" ];
-      transportExtra = endpointEnvironment;
-    })
-    ++ lib.optional (documentPackage != null) (renderServer {
-      name = "markitdown";
-      command = "${documentPackage}/bin/markitdown-mcp";
-      approval = documentApproval;
-      tools = [ "convert_to_markdown" ];
-      trustedReadOnlyTools = [ "convert_to_markdown" ];
-    });
+  servers = lib.optional (paddleOcrPackage != null) (renderServer {
+    name = "paddle-ocr";
+    command = "${paddleOcrPackage}/bin/autolith-paddle-ocr-mcp";
+    approval = paddleOcrApproval;
+    tools = [ "paddle_ocr" ];
+    trustedReadOnlyTools = [ "paddle_ocr" ];
+    transportExtra = endpointEnvironment;
+  });
 in
 ''
   (:version 1

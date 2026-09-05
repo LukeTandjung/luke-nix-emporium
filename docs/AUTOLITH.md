@@ -10,7 +10,6 @@ This repository pins the Autolith package as a flake input. It stores the user c
 - `pkgs/autolith/patches`: focused source changes applied before the base image build
 - `pkgs/autolith/mcp.nix`: generated MCP configuration
 - `pkgs/autolith-paddle-ocr-mcp`: local PaddleOCR-VL MCP server
-- `pkgs/markitdown-mcp`: Nix package for the upstream Microsoft document conversion MCP server
 - `modules/autolith.nix`: Home Manager module
 
 Generated SBCL core files and private mutation history are not committed. Nix builds the base image from the locked upstream Autolith source. The committed Home Manager module, initialization source, MCP configuration, skills, and agent definitions reconstruct the local configuration.
@@ -34,7 +33,7 @@ This installs Autolith and the tool packages required by the shared skills. It w
 ~/.config/autolith/agents/<name>.sexp
 ```
 
-The PaddleOCR and MarkItDown MCP servers are enabled by default. The PaddleOCR server uses `http://127.0.0.1:8080/v1` and model `paddleocr-vl-1.6`.
+The PaddleOCR MCP server is enabled by default. The PaddleOCR server uses `http://127.0.0.1:8080/v1` and model `paddleocr-vl-1.6`.
 
 Map a different parent environment variable into the server when needed:
 
@@ -59,7 +58,7 @@ The Pi, Claude Code, and Autolith modules all use this directory. Autolith reads
 
 ## Skills
 
-The shared `autoresearch` skill defines measured Git experiments under `.auto/`. The `document-parsing` skill selects MarkItDown for document conversion and PaddleOCR for visual OCR.
+The shared `autoresearch` skill defines measured Git experiments under `.auto/`.
 
 Make source-level Autolith changes in the upstream Autolith repository with tests. Configure external tools as upstream MCP packages when they are available.
 
@@ -71,11 +70,6 @@ PDF input uses `pdftoppm`. The Home Manager module installs Poppler, ImageMagick
 
 The MCP server marks `paddle_ocr` as read-only and non-destructive. Autolith prompts for approval by default. Set `programs.autolith.paddleOcr.approval = "read-only"` to trust the tool without a prompt.
 
-## Documents
-
-The upstream MarkItDown server provides `convert_to_markdown`. It converts local file URIs and remote URIs to Markdown, including PDF, Word, PowerPoint, and Excel input. The Home Manager module installs the server from a fixed Microsoft source revision; this repository does not vendor its source.
-
-The tool can read files available to the Autolith process and can fetch remote URLs. Autolith prompts for approval by default. Set `programs.autolith.document.approval = "read-only"` to trust `convert_to_markdown` without a prompt.
 
 ## Update the Autolith package
 

@@ -40,7 +40,6 @@
           pi = pkgs.callPackage ./pkgs/pi { };
           pi_quint_toolchain = pkgs.callPackage ./pkgs/quint-toolchain { };
           autolith_paddle_ocr_mcp = pkgs.callPackage ./pkgs/autolith-paddle-ocr-mcp { };
-          markitdown_mcp = pkgs.callPackage ./pkgs/markitdown-mcp { };
           terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
           default = self.packages.${system}.leetgpu_cli;
         }

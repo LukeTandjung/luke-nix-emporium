@@ -18,15 +18,12 @@ let
     else throw "Autolith does not provide a package for ${pkgs.system}";
   quintToolchain = pkgs.callPackage ../pkgs/quint-toolchain { };
   paddleOcrPackage = cfg.paddleOcr.package;
-  documentPackage = cfg.document.package;
-  mcpEnabled = cfg.paddleOcr.enable || cfg.document.enable;
+  mcpEnabled = cfg.paddleOcr.enable;
   mcpConfig = import ../pkgs/autolith/mcp.nix {
     inherit lib;
     paddleOcrPackage = if cfg.paddleOcr.enable then paddleOcrPackage else null;
     paddleOcrApproval = cfg.paddleOcr.approval;
     endpointEnvironmentVariable = cfg.paddleOcr.endpointEnvironmentVariable;
-    documentPackage = if cfg.document.enable then documentPackage else null;
-    documentApproval = cfg.document.approval;
   };
   fileValue = value:
     if builtins.isPath value
@@ -98,23 +95,6 @@ in
       };
     };
 
-    document = {
-      enable = lib.mkEnableOption "the MarkItDown document conversion MCP tool" // {
-        default = true;
-      };
-
-      package = lib.mkOption {
-        type = lib.types.package;
-        default = pkgs.callPackage ../pkgs/markitdown-mcp { };
-        description = "The Microsoft MarkItDown MCP server package.";
-      };
-
-      approval = lib.mkOption {
-        type = approvalType;
-        default = "prompt";
-        description = "Autolith approval policy for the MarkItDown MCP server.";
-      };
-    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -128,8 +108,7 @@ in
 
     home.packages = [ cfg.package ]
       ++ cfg.extraPackages
-      ++ lib.optional cfg.paddleOcr.enable paddleOcrPackage
-      ++ lib.optional cfg.document.enable documentPackage;
+      ++ lib.optional cfg.paddleOcr.enable paddleOcrPackage;
 
     xdg.configFile = lib.mkMerge [
       (lib.optionalAttrs (cfg.init != null) {
