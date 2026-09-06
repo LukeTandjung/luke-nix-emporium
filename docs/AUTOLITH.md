@@ -78,6 +78,22 @@ pin to `ef20ce4bde2eb1d8f483a063788256aad06d0968`, which supports the `:prefix`
 and `:guidance` arguments Autolith uses. Autolith's Lisp source is not patched.
 Remove this workaround once upstream aligns the dependency pins.
 
+## Local Lisp patches
+
+Store tested live fixes in `pkgs/autolith/init.lisp`. Home Manager installs this
+file as `~/.config/autolith/init.lisp`, which Autolith loads at startup. Commit
+this source and its documentation rather than a saved core or private replay script.
+
+The current Autolith 0.47.1 override accepts Nix store targets reached through
+links under the configured user skill root. It preserves the logical skill paths
+for name validation. Remove the override when upstream supports Home Manager
+skill links.
+
+After changing this file, run `nix flake check`, update the consuming configuration's
+flake input if needed, and apply its Home Manager configuration. Check `/skills`
+in a new Autolith process. Retire a matching private image override only after
+the installed initialization file works without it.
+
 ## Update the Autolith package
 
 Change the Autolith release tag in `flake.nix`. Then update the lock file and run the checks:
