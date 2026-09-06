@@ -49,6 +49,9 @@
             autolithSource = autolith;
           };
         }
+        // pkgs.lib.optionalAttrs (system != "x86_64-darwin") {
+          delta = pkgs.callPackage ./pkgs/delta { };
+        }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           claude_desktop = pkgs.callPackage ./pkgs/claude-desktop { };
         }
@@ -59,6 +62,7 @@
         bookokrat = import ./modules/bookokrat.nix;
         claude-code = import ./modules/claude-code.nix;
         claude-desktop = import ./modules/claude-desktop.nix;
+        delta = import ./modules/delta.nix;
         leetgpu = import ./modules/leetgpu.nix;
         pencil = import ./modules/pencil.nix;
         pi = import ./modules/pi.nix;
@@ -68,6 +72,7 @@
             self.homeManagerModules.bookokrat
             self.homeManagerModules.claude-code
             self.homeManagerModules.claude-desktop
+            self.homeManagerModules.delta
             self.homeManagerModules.leetgpu
             self.homeManagerModules.pencil
             self.homeManagerModules.pi
