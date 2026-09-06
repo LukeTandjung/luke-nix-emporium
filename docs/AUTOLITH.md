@@ -70,6 +70,14 @@ PDF input uses `pdftoppm`. The Home Manager module installs Poppler, ImageMagick
 The MCP server marks `paddle_ocr` as read-only and non-destructive. Autolith prompts for approval by default. Set `programs.autolith.paddleOcr.approval = "read-only"` to trust the tool without a prompt.
 
 
+## Dependency workaround
+
+Autolith v0.47.1's Nix package pins an older `cl-skills` revision than its
+`qlfile.lock`. `pkgs/autolith/package.nix` overrides only that stale dependency
+pin to `ef20ce4bde2eb1d8f483a063788256aad06d0968`, which supports the `:prefix`
+and `:guidance` arguments Autolith uses. Autolith's Lisp source is not patched.
+Remove this workaround once upstream aligns the dependency pins.
+
 ## Update the Autolith package
 
 Change the Autolith release tag in `flake.nix`. Then update the lock file and run the checks:

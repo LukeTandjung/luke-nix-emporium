@@ -6,16 +6,16 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1787953892,
-        "narHash": "sha256-dearvhMFO9bVH0MpoUPyWBrEBzvynOP5Ziak99fTg3k=",
+        "lastModified": 1788633714,
+        "narHash": "sha256-TWiTbUnFJMub9D2tb9LYMEEiqBNSsngHjYnjG9LQRdY=",
         "owner": "lambda-symbolics",
         "repo": "autolith",
-        "rev": "91dc8d01ba2422497f03c42990f4afc5192cadeb",
+        "rev": "892e223b0b7a2d7143787b7c9e4d7ecee644a83c",
         "type": "github"
       },
       "original": {
         "owner": "lambda-symbolics",
-        "ref": "v0.43.0",
+        "ref": "v0.47.1",
         "repo": "autolith",
         "type": "github"
       }
