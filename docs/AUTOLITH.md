@@ -7,6 +7,7 @@ This repository pins the Autolith package as a flake input. It stores the user c
 - `pkgs/agent-skills`: shared `SKILL.md` sources for Autolith, Pi, and Claude Code
 - `pkgs/autolith/init.lisp`: global executable initialization
 - `pkgs/autolith/package.nix`: package builder for the locked upstream source
+- `pkgs/autolith/patches`: source patches for the pinned Autolith release
 - `pkgs/autolith/mcp.nix`: generated MCP configuration
 - `pkgs/autolith-paddle-ocr-mcp`: local PaddleOCR-VL MCP server
 - `modules/autolith.nix`: Home Manager module
@@ -59,7 +60,7 @@ The Pi, Claude Code, and Autolith modules all use this directory. Autolith reads
 
 The shared `autoresearch` skill defines measured Git experiments under `.auto/`.
 
-Make source-level Autolith changes in the upstream Autolith repository with tests. Configure external tools as upstream MCP packages when they are available.
+Develop source-level Autolith changes against the pinned upstream release, with behavioral tests. Store local source patches in `pkgs/autolith/patches`. Configure external tools as upstream MCP packages when they are available.
 
 ## PaddleOCR
 
@@ -75,8 +76,62 @@ The MCP server marks `paddle_ocr` as read-only and non-destructive. Autolith pro
 Autolith v0.47.1's Nix package pins an older `cl-skills` revision than its
 `qlfile.lock`. `pkgs/autolith/package.nix` overrides only that stale dependency
 pin to `ef20ce4bde2eb1d8f483a063788256aad06d0968`, which supports the `:prefix`
-and `:guidance` arguments Autolith uses. Autolith's Lisp source is not patched.
+and `:guidance` arguments Autolith uses.
 Remove this workaround once upstream aligns the dependency pins.
+
+## Packaged source patches
+
+`pkgs/autolith/package.nix` applies these patches in order to Autolith **v0.47.1**:
+
+1. `inline-file-context.patch`: type `@` followed by a workspace file query,
+   then select a match with Tab. The editor inserts a quoted path when needed.
+   The submission carries the selected UTF-8 snapshot separately from the draft.
+   Limits are 128 KiB per file and 256 KiB per submission.
+2. `shift-tab-reasoning.patch`: Shift-Tab cycles the model's supported reasoning
+   efforts. Completion candidates take priority, then recalled queue editing,
+   then reasoning. `/effort next` uses the same relative operation.
+   During a turn, each press takes effect at a safe command boundary.
+
+These replace the v0.40.1 patches removed in `5ad0c17`. Rebase and test them when
+changing the upstream release. Build the package, not only the flake evaluation:
+
+```bash
+nix flake check
+nix build .#autolith --no-link
+```
+
+### Repair notes
+
+The old Shift-Tab patch also contained partial repairs for the inline patch.
+The new patches separate those responsibilities. The review found:
+
+- Shift-Tab calculated an absolute effort on the input thread. Repeated presses
+  during a turn queued the same value. The command now resolves `next` when it runs.
+- File search blocked the input thread. The new worker coalesces pending queries,
+  discards stale results, and respects Escape and UI shutdown. Runtime replacement
+  drains that worker before it closes the old search engine, then binds completion
+  and file selection to the new workspace.
+- On v0.47.1, the old completion code treated decorated `clifff` search output as
+  filenames. A dedicated child-worker operation now returns exact paths. Spaces,
+  brackets, quotes, and backslashes survive selection.
+- The inline patch matched attachment history by text. The old Shift-Tab patch
+  changed this to a parallel index, but did not preserve saved draft attachments.
+  History now tracks exact entries and the saved draft. Submission and history
+  use the same pruned attachments.
+- The inline patch alone discarded editor action values through a misplaced
+  cleanup form. Its token predicate also returned a character despite its boolean
+  type. Both repairs now belong to the inline patch.
+
+On x86_64-linux, both Nix commands above pass. A fresh process using the built
+package passes 620 assertions across the terminal suite, command suite, effort
+switching, file-context replay, recovery construction, and workspace switching.
+The patches include these tests, including repeated busy Shift-Tab presses and
+blocked completion workers.
+
+The full upstream suites have separate environment failures on the unmodified
+v0.47.1 package: application approval classification in the worker environment,
+and a clean-child conversation test whose registry setting conflicts with the Nix
+SBCL wrapper. The focused suites above pass without changing those tests.
 
 ## Local Lisp patches
 

@@ -20,8 +20,16 @@ let
         hash = "sha256-Y4+uUmaQ9tY/J8hf/R3wUS8UJHhwXkQm29oUmk8GcNU=";
       });
   };
+  patchedSource = upstreamPkgs.applyPatches {
+    name = "autolith-0.47.1-patched-source";
+    src = autolithSource;
+    patches = [
+      ./patches/inline-file-context.patch
+      ./patches/shift-tab-reasoning.patch
+    ];
+  };
 in
 import "${autolithSource}/nix/package.nix" {
   pkgs = buildPkgs;
-  src = autolithSource;
+  src = patchedSource;
 }
