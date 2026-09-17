@@ -49,9 +49,6 @@
             autolithSource = autolith;
           };
         }
-        // pkgs.lib.optionalAttrs (system != "x86_64-darwin") {
-          delta = pkgs.callPackage ./pkgs/delta { };
-        }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           claude_desktop = pkgs.callPackage ./pkgs/claude-desktop { };
         }
