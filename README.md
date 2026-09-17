@@ -46,7 +46,7 @@ Add this flake to your inputs:
 
 ### Home Manager modules
 
-The [Delta module](docs/DELTA.md) manages shared skills only; install the app separately.
+The [Delta module](docs/DELTA.md) manages shared skills and instructions; install the app separately.
 
 Import all modules at once:
 
@@ -60,6 +60,7 @@ Import all modules at once:
   programs.claude-desktop.enable = true; # Linux only
   programs.leetgpu.enable = true;
   programs.zed-delta.skills.enable = true; # Shared skills only; does not install Delta
+  programs.zed-delta.context.enable = true; # Shared personal AGENTS.md instructions
 
   programs.pi = {
     enable = true;
