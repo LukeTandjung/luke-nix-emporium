@@ -73,15 +73,13 @@ The MCP server marks `paddle_ocr` as read-only and non-destructive. Autolith pro
 
 ## Dependency workaround
 
-Autolith v0.47.1's Nix package pins an older `cl-skills` revision than its
-`qlfile.lock`. `pkgs/autolith/package.nix` overrides only that stale dependency
-pin to `ef20ce4bde2eb1d8f483a063788256aad06d0968`, which supports the `:prefix`
-and `:guidance` arguments Autolith uses.
-Remove this workaround once upstream aligns the dependency pins.
+Autolith v0.50.0 aligns its Nix `cl-skills` pin with `qlfile.lock`.
+The dependency override needed by v0.47.1 has been removed. This does not change
+the vendored source-patch workflow below.
 
 ## Packaged source patches
 
-`pkgs/autolith/package.nix` applies these patches in order to Autolith **v0.47.1**:
+`pkgs/autolith/package.nix` applies these patches in order to Autolith **v0.50.0**:
 
 1. `inline-file-context.patch`: type `@` followed by a workspace file query,
    then select a match with Tab. The editor inserts a quoted path when needed.
@@ -122,13 +120,14 @@ The new patches separate those responsibilities. The review found:
   cleanup form. Its token predicate also returned a character despite its boolean
   type. Both repairs now belong to the inline patch.
 
-On x86_64-linux, both Nix commands above pass. A fresh process using the built
-package passes 620 assertions across the terminal suite, command suite, effort
-switching, file-context replay, recovery construction, and workspace switching.
-The patches include these tests, including repeated busy Shift-Tab presses and
-blocked completion workers.
+On x86_64-linux, both Nix commands above pass. The v0.50.0 update passed 44
+focused cases with 678 checks across the terminal and fullscreen suites, effort
+switching, and conversation persistence, including snapshot replay. The local
+terminal tests are registered in upstream's FiveAM catalog. Both patches apply
+in order with zero fuzz.
 
-The full upstream suites have separate environment failures on the unmodified
+The full v0.50.0 suite has not been run. Historically, the full upstream suites
+had separate environment failures on the unmodified
 v0.47.1 package: application approval classification in the worker environment,
 and a clean-child conversation test whose registry setting conflicts with the Nix
 SBCL wrapper. The focused suites above pass without changing those tests.

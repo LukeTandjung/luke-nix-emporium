@@ -1,24 +1,9 @@
 From c9ab81920e0593678f0b2ac12084df69267e12c2 Mon Sep 17 00:00:00 2001
 From: Autolith Nix build <nix-build@localhost>
 Date: Sun, 6 Sep 2026 17:55:36 +0100
-Subject: [PATCH] Restore bounded inline file context for Autolith 0.47.1
+Subject: [PATCH] Restore bounded inline file context for Autolith 0.50.0
 
 ---
- bin/autolith-search-worker         |  20 +-
- src/application/lisp-machine.lisp  |   3 +-
- src/application/operation.lisp     |   3 +-
- src/application/runtime.lisp       |  26 ++
- src/conversation/image-input.lisp  | 154 ++++++++-
- src/conversation/store.lisp        |  48 ++-
- src/terminal/protocol.lisp         |  54 +++
- src/terminal/responsive-input.lisp |  58 ++--
- src/terminal/ui.lisp               | 514 ++++++++++++++++++++++++-----
- src/workers/search.lisp            |  26 ++
- tests/application-tests.lisp       |   4 +
- tests/conversation-tests.lisp      | 100 ++++++
- tests/terminal-tests.lisp          | 384 +++++++++++++++++++++
- 13 files changed, 1265 insertions(+), 129 deletions(-)
-
 diff --git a/bin/autolith-search-worker b/bin/autolith-search-worker
 index 05225b8..b6fbf53 100755
 --- a/bin/autolith-search-worker
@@ -59,7 +44,7 @@ index e3ef4ab..598644e 100644
 +      :image-pathnames (user-message-input-image-pathnames input)
 +      :file-contexts (user-message-input-file-contexts input)))))
  
- (-> application-lisp--control-condition-p (serious-condition) boolean)
+ (-> application-lisp--control-condition-p (condition) boolean)
  (defun application-lisp--control-condition-p (condition)
 diff --git a/src/application/operation.lisp b/src/application/operation.lisp
 index 6276269..4379865 100644
@@ -491,14 +476,15 @@ diff --git a/src/terminal/responsive-input.lisp b/src/terminal/responsive-input.
 index 9e1b3ea..85bb8db 100644
 --- a/src/terminal/responsive-input.lisp
 +++ b/src/terminal/responsive-input.lisp
-@@ -503,7 +503,8 @@ second reports whether shutdown was prepared."
+@@ -503,8 +503,9 @@ second reports whether shutdown was prepared."
           (user-message-input
            (user-message-input-create
             :text (subseq text 1)
 -           :image-pathnames (user-message-input-image-pathnames input)))))
 +           :image-pathnames (user-message-input-image-pathnames input)
 +           :file-contexts (user-message-input-file-contexts input)))))
-       ((terminal-ui--lisp-draft-p text)
+       ((or (terminal-ui--lisp-draft-p text)
+            (terminal-ui--async-lisp-draft-p text))
         nil)
        ((uiop:string-prefix-p "/" text)
 @@ -620,15 +621,22 @@ lock."
@@ -585,7 +571,7 @@ index c9275df..d4c295a 100644
 +++ b/src/terminal/ui.lisp
 @@ -135,11 +135,13 @@
      (&key (:terminal terminal) (:editor (option line-editor)) (:prompt string)
-           (:placeholder string) (:completions list)
+           (:placeholder string) (:completions list) (:fullscreen-p boolean)
            (:completion-function (option function))
 +          (:file-completion-function (option function))
 +          (:workspace-root (option pathname))
@@ -593,10 +579,10 @@ index c9275df..d4c295a 100644
      terminal-ui)
  (defun terminal-ui-create
      (&key terminal editor (prompt "> ") (placeholder "") completions
--          completion-function
-+          completion-function file-completion-function workspace-root
+-          completion-function fullscreen-p
++          completion-function fullscreen-p file-completion-function workspace-root
            (clock-function #'terminal-ui--monotonic-seconds))
-   "Create a scrollback-preserving UI for TERMINAL."
+   "Create an inline or opt-in fullscreen UI for interactive TERMINAL."
    (unless (typep terminal 'terminal)
 @@ -157,6 +159,16 @@
             :message "The completion provider must be a function or NIL."
@@ -753,7 +739,7 @@ index c9275df..d4c295a 100644
     (terminal-ui-editor ui)
     (sanitize-text (user-message-input-text input)))
 @@ -779,6 +816,277 @@ columns: name, tally, and description."
-           (slot-value editor 'clinedi::history-stash-cursor) stash-cursor))
+   (clinedi:line-editor-restore editor state)
    nil)
  
 +;;;; -- Inline Workspace File Completion --
@@ -1030,23 +1016,20 @@ index c9275df..d4c295a 100644
  (-> terminal-ui--completion-offered-p (terminal-ui) boolean)
  (defun terminal-ui--completion-offered-p (ui)
    "Return true when UI may paint or begin command completion."
-@@ -2086,6 +2394,7 @@ form keeps every speculative Markdown wrap live until the logical line commits."
-              (setf rows
-                    (append rows
-                            (list prompt-spans)
-+                           (terminal-ui--file-completion-rows ui row-width)
-                            (terminal-ui--completion-rows
-                             ui row-width)
-                            (list nil)))
+@@ -2080,3 +2388,4 @@
+          (values (append (list prompt-spans)
++                         (terminal-ui--file-completion-rows ui row-width)
+                          (terminal-ui--completion-rows ui row-width)
+                          (list nil))
 @@ -2610,6 +2919,7 @@ input is ready. Explicit NIL preserves blocking reads."
-              (terminal-write-prompt-marker
                (terminal-ui-terminal ui) ':command-finished 1))
-            (live-region-dismiss (terminal-ui-live-region ui)))
+            (unless (terminal-ui-fullscreen-p ui)
+              (live-region-dismiss (terminal-ui-live-region ui))))
 +       (terminal-ui--clear-file-completion ui)
         (setf (terminal-ui-started-p ui) nil
               (terminal-ui-prompt-marker-state ui) ':closed
               (terminal-ui-notice ui) nil
-@@ -3230,57 +3540,93 @@ thread."
+@@ -3230,60 +3540,96 @@ thread."
  (defun terminal-ui-process-event
      (ui event &key queue-completion-p queue-editing-p)
    "Apply EVENT to UI's suggestions or editor and return its action and payload."
@@ -1054,6 +1037,9 @@ index c9275df..d4c295a 100644
 +  (terminal-ui--refresh-file-completion ui)
 +  (unwind-protect
 +       (with-terminal-ui-locked (ui)
+     (when (and (terminal-ui-fullscreen-p ui)
+                (terminal-ui-fullscreen-handle-event ui event))
+       (return-from terminal-ui-process-event (values ':changed nil)))
      (let* ((editor (terminal-ui-editor ui))
 -           ;; The editor installs a fresh string on every text change, so
 -           ;; holding the reference preserves the pre-event content.
@@ -1242,8 +1228,8 @@ diff --git a/tests/conversation-tests.lisp b/tests/conversation-tests.lisp
 index 3700130..ac42085 100644
 --- a/tests/conversation-tests.lisp
 +++ b/tests/conversation-tests.lisp
-@@ -1920,10 +1920,110 @@ fresh process and file-based synchronization instead of SB-POSIX:FORK."
-       (uiop:delete-directory-tree root :validate t :if-does-not-exist ':ignore)))
+@@ -1763,9 +1763,109 @@
+       (platform-delete-directory-tree *platform* root :validate t :if-does-not-exist ':ignore)))
    nil)
  
 +(-> test-conversation-workspace-file-context () null)
@@ -1347,12 +1333,11 @@ index 3700130..ac42085 100644
  (-> test-conversation-persistence () null)
  (defun test-conversation-persistence ()
    "Test append-only conversation projection and incomplete-tail recovery."
-   (test-conversation-image-input)
 +  (test-conversation-workspace-file-context)
 +  (test-conversation-file-only-replay)
-   (test-conversation-inherited-reference)
-   (test-conversation-ephemeral-tool-projection)
-   (test-conversation-ephemeral-append-interruption)
+   (let* ((configuration (test-configuration))
+          (root (test-configuration-root configuration)))
+     (unwind-protect
 diff --git a/tests/terminal-tests.lisp b/tests/terminal-tests.lisp
 index 4520315..50e3570 100644
 --- a/tests/terminal-tests.lisp
@@ -1661,7 +1646,7 @@ index 4520315..50e3570 100644
    (test-terminal-lisp-operation-completion)
    (test-terminal-modal-selection)
    (test-terminal-modal-default-polling)
-@@ -2945,3 +3235,97 @@ sources keeps the tests deterministic under an interactive terminal."
+@@ -2267,6 +2557,100 @@ sources keeps the tests deterministic under an interactive terminal."
            (test-assert (not (search "worked" status-row))
                         "a narrow status row drops the worked segment first")))))
    nil)
@@ -1759,6 +1744,26 @@ index 4520315..50e3570 100644
 +      (tool-registry-close-runtime-state next-registry)
 +      (uiop:delete-directory-tree root :validate t :if-does-not-exist :ignore)))
 +  nil)
+ 
+ 
+ (defclass prompt-recording-terminal (stream-terminal)
+diff --git a/tests/test-suites.lisp b/tests/test-suites.lisp
+--- a/tests/test-suites.lisp
++++ b/tests/test-suites.lisp
+@@ -517,6 +517,13 @@
+   test-terminal-command-activities
+   test-terminal-stream-update
+   test-terminal-command-completion
++  test-terminal-inline-file-completion
++  test-inline-async-lifecycle
++  test-inline-history-snapshots
++  test-inline-runtime-rebinding
++  test-inline-file-bounds
++  test-inline-search-protocol
++  test-inline-file-context-pending-round-trip
+   test-terminal-lisp-operation-completion
+   test-terminal-modal-selection
+   test-terminal-application-read-resize
 -- 
 2.55.0
 

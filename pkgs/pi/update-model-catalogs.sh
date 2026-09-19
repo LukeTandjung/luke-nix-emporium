@@ -22,7 +22,7 @@ fetch() {
   curl --fail --location --show-error --silent "$url" --output "$tmp"
 
   if command -v jq >/dev/null 2>&1; then
-    jq empty "$tmp" >/dev/null
+    jq -e 'type == "object"' "$tmp" >/dev/null
   fi
 
   mv "$tmp" "$output"
@@ -33,5 +33,6 @@ fetch "https://models.dev/api.json" "$catalog_dir/models-dev-api.json"
 fetch "https://integrate.api.nvidia.com/v1/models" "$catalog_dir/nvidia-models.json"
 fetch "https://openrouter.ai/api/v1/models" "$catalog_dir/openrouter-models.json"
 fetch "https://ai-gateway.vercel.sh/v1/models" "$catalog_dir/ai-gateway-models.json"
+fetch "https://radius.pi.dev/v1/config" "$catalog_dir/radius-config.json"
 
 echo "Updated pi model catalog snapshots in $catalog_dir"

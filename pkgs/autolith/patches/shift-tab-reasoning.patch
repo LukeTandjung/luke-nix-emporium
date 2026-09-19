@@ -5,13 +5,6 @@ Subject: [PATCH] Restore Shift-Tab effort cycling with relative safe-boundary
  commands
 
 ---
- src/application/commands.lisp      | 18 +++++++-
- src/terminal/responsive-input.lisp |  3 ++
- src/terminal/ui.lisp               | 10 +++--
- tests/application-tests.lisp       | 71 ++++++++++++++++++++++++++++++
- tests/terminal-tests.lisp          | 40 +++++++++++++++++
- 5 files changed, 137 insertions(+), 5 deletions(-)
-
 diff --git a/src/application/commands.lisp b/src/application/commands.lisp
 index 0d9a789..4932a7d 100644
 --- a/src/application/commands.lisp
@@ -40,7 +33,7 @@ index 0d9a789..4932a7d 100644
 -     :argument "[LEVEL]"
 +     :argument "[LEVEL|next]"
       :description "pick the reasoning effort"
-      :tip "changes reasoning effort without switching models."
+      :tip "sets the model's reasoning budget without changing models. Higher levels allow more reasoning and can take longer; available levels depend on the model."
       :busy-behavior :apply
 @@ -2137,7 +2147,11 @@ are forwarded to TERMINAL-UI-SELECT."
      (application &optional (effort nil effort-supplied-p))
@@ -103,7 +96,7 @@ index 6ef567d..b6d0ade 100644
 --- a/tests/application-tests.lisp
 +++ b/tests/application-tests.lisp
 @@ -7220,6 +7220,76 @@
-       (uiop:delete-directory-tree root :validate t :if-does-not-exist ':ignore)))
+       (platform-delete-directory-tree *platform* root :validate t :if-does-not-exist ':ignore)))
    nil)
  
 +(defun test-application-shift-tab-cycle (application ui configuration)
@@ -199,7 +192,7 @@ index 50e3570..15cef43 100644
    (test-terminal-line-editor)
    (test-terminal-history-replacement)
    (test-terminal-image-attachments)
-@@ -3329,3 +3330,42 @@ sources keeps the tests deterministic under an interactive terminal."
+@@ -2651,6 +2652,45 @@ sources keeps the tests deterministic under an interactive terminal."
        (tool-registry-close-runtime-state next-registry)
        (uiop:delete-directory-tree root :validate t :if-does-not-exist :ignore)))
    nil)
@@ -242,6 +235,20 @@ index 50e3570..15cef43 100644
 +                       "preserve this draft"))
 +         "reasoning cycling is the final Shift-Tab action and preserves the draft"))))
 +  NIL)
+ 
+ 
+ (defclass prompt-recording-terminal (stream-terminal)
+diff --git a/tests/test-suites.lisp b/tests/test-suites.lisp
+--- a/tests/test-suites.lisp
++++ b/tests/test-suites.lisp
+@@ -502,6 +502,7 @@
+   test-terminal-finalized-scrollback
+   test-terminal-resize-frame
+   test-terminal-relayed-resize
++  test-terminal-shift-tab-priority
+   test-terminal-line-editor
+   test-terminal-history-replacement
+   test-terminal-image-attachments
 -- 
 2.55.0
 

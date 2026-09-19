@@ -18,22 +18,23 @@ let
   nvidiaModels = ./model-catalogs/nvidia-models.json;
   openrouterModels = ./model-catalogs/openrouter-models.json;
   aiGatewayModels = ./model-catalogs/ai-gateway-models.json;
+  radiusConfig = ./model-catalogs/radius-config.json;
 
   # Reads like `await fetch(...)` but from a store path.
   localResponse = path: ''new Response(await import("node:fs").then((m) => m.readFileSync("${path}", "utf8")))'';
 in
 buildNpmPackage {
   pname = "pi";
-  version = "0.85.0-unstable-2026-09-05";
+  version = "0.85.1-unstable-2026-09-19";
 
   src = fetchFromGitHub {
     owner = "earendil-works";
     repo = "pi";
-    rev = "17de82d7bea18a6589677a9761baabc2060c9efb";
-    hash = "sha256-CGyxalhSHyjvxK8NlNlUZmoYO+h41HMRmgBNJ9llPyE=";
+    rev = "4d38031fbdbed43bc481ddf9c3c279005ab24674";
+    hash = "sha256-05Uv1Cfb0CPKKfr25nalwGFShEycyts7WjzQjarhzHs=";
   };
 
-  npmDepsHash = "sha256-K/KiukwTHwu4HE8hUu7ur3bxggwfO0WL+QDI0FtxP3I=";
+  npmDepsHash = "sha256-UHfLj8BVf2rk17+VpTfF0Vrjt/cM+vonYtv8jUn4/mo=";
 
   # Point the script's catalog fetches at the pinned snapshots.
   postPatch = ''
@@ -49,7 +50,10 @@ buildNpmPackage {
         'const response = ${localResponse openrouterModels};' \
       --replace-fail \
         'const response = await fetch(`''${AI_GATEWAY_MODELS_URL}/models`);' \
-        'const response = ${localResponse aiGatewayModels};'
+        'const response = ${localResponse aiGatewayModels};' \
+      --replace-fail \
+        'const config = await loadRadiusGatewayConfig(DEFAULT_RADIUS_GATEWAY);' \
+        'const config = await (${localResponse radiusConfig}).json();'
   '';
 
   makeCacheWritable = true;
@@ -58,21 +62,11 @@ buildNpmPackage {
   # with native deps (canvas/pixman) that we don't need for the CLI.
   npmFlags = [ "--ignore-scripts" ];
 
-  # Build workspace deps in dependency order via tsgo (@typescript/native-preview in root devDeps).
-  # '|| true' on upstream packages lets us continue past type errors that the dev-preview
-  # tsgo flags but upstream tsc did not — tsgo still emits JS when noEmitOnError is unset.
+  # Generate catalog data from the pinned snapshots, then use upstream's offline
+  # build to compile workspaces in dependency order and copy their runtime assets.
   preBuild = ''
-    TSGO="$(pwd)/node_modules/.bin/tsgo"
-
-    (cd packages/chord && "$TSGO" -p tsconfig.build.json || true)
-    (cd packages/telemetry && "$TSGO" -p tsconfig.build.json || true)
-    (cd packages/protocol && "$TSGO" -p tsconfig.build.json || true)
-    (cd packages/client && "$TSGO" -p tsconfig.build.json || true)
-    (cd packages/tui && "$TSGO" -p tsconfig.build.json || true)
-    (cd packages/ai && npm run generate-models && ("$TSGO" -p tsconfig.build.json || true))
-    (cd packages/agent && "$TSGO" -p tsconfig.build.json || true)
-    (cd packages/server && "$TSGO" -p tsconfig.build.json || true)
-    (cd packages/coding-agent && "$TSGO" -p tsconfig.build.json && npm run copy-assets)
+    npm --prefix packages/ai run generate-models
+    npm run build:offline
   '';
   dontNpmBuild = true;
 
@@ -87,7 +81,7 @@ buildNpmPackage {
     # Prune dev deps to avoid shipping tsgo, biome, etc.
     npm prune --omit=dev --offline
 
-    # Copy the workspace tree. Symlinks in node_modules (e.g. @mariozechner/pi-ai ->
+    # Copy the workspace tree. Symlinks in node_modules (e.g. @earendil-works/pi-ai ->
     # ../../packages/ai) remain valid because the relative directory structure is preserved.
     mkdir -p $out/lib/pi-mono
     cp -r node_modules packages $out/lib/pi-mono/
@@ -101,9 +95,7 @@ buildNpmPackage {
     runHook postInstall
   '';
 
-  # Startup resolves the full ESM import graph, so a missing generated
-  # *.models.js (the failure mode the '|| true' above can mask) fails here
-  # with ERR_MODULE_NOT_FOUND instead of shipping a broken CLI.
+  # Exercise the installed CLI so missing runtime assets fail the build.
   doInstallCheck = true;
   installCheckPhase = ''
     runHook preInstallCheck
