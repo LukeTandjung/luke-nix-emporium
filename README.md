@@ -7,6 +7,7 @@ A personal collection of Nix flake packages for software not yet available in ni
 | Package | Description |
 |---------|-------------|
 | [Autolith](docs/AUTOLITH.md) | Live Common Lisp agent with shared skills, document conversion, and OCR |
+| [bend](docs/BEND.md) | Bend 2 language with formal proofs and CPU/GPU parallelism |
 | bookokrat | Terminal EPUB/PDF/DJVU reader with Vim-style workflows |
 | claude_code | Agentic coding tool for the terminal |
 | claude_desktop | Claude Desktop app for Linux |
@@ -34,6 +35,7 @@ Add this flake to your inputs:
 {
   home.packages = [
     inputs.luke-pkgs.packages.${pkgs.system}.autolith
+    inputs.luke-pkgs.packages.${pkgs.system}.bend
     inputs.luke-pkgs.packages.${pkgs.system}.bookokrat
     inputs.luke-pkgs.packages.${pkgs.system}.claude_code
     inputs.luke-pkgs.packages.${pkgs.system}.claude_desktop # Linux only
@@ -55,6 +57,7 @@ Import all modules at once:
   imports = [ inputs.luke-pkgs.homeManagerModules.default ];
 
   programs.autolith.enable = true;
+  programs.bend.enable = true;
   programs.bookokrat.enable = true;
   programs.claude-code.enable = true; # Reuses the shared agent skills and context
   programs.claude-desktop.enable = true; # Linux only

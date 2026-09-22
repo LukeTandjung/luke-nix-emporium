@@ -33,6 +33,7 @@
           };
         in
         {
+          bend = pkgs.callPackage ./pkgs/bend { };
           bookokrat = pkgs.callPackage ./pkgs/bookokrat { };
           claude_code = pkgs.callPackage ./pkgs/claude-code { };
           leetgpu_cli = pkgs.callPackage ./pkgs/leetgpu-cli { };
@@ -56,6 +57,7 @@
 
       homeManagerModules = {
         autolith = import ./modules/autolith.nix { inherit autolith; };
+        bend = import ./modules/bend.nix;
         bookokrat = import ./modules/bookokrat.nix;
         claude-code = import ./modules/claude-code.nix;
         claude-desktop = import ./modules/claude-desktop.nix;
@@ -66,6 +68,7 @@
         default = {
           imports = [
             self.homeManagerModules.autolith
+            self.homeManagerModules.bend
             self.homeManagerModules.bookokrat
             self.homeManagerModules.claude-code
             self.homeManagerModules.claude-desktop
