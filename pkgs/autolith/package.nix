@@ -7,10 +7,11 @@ let
   upstreamPkgs = import autolithSource.inputs.nixpkgs {
     system = pkgs.stdenv.hostPlatform.system;
   };
-  # v0.50.0 still lacks inline file snapshots and Shift-Tab effort cycling.
-  # Keep these in order: reasoning cycling extends the inline completion handler.
+  # Extend v0.55.0's native path selection with bounded file snapshots.
+  # No separate completion UI or asynchronous search scheduler.
+  # Reasoning cycling follows native completion and recalled queue editing.
   patchedSource = upstreamPkgs.applyPatches {
-    name = "autolith-0.50.0-patched-source";
+    name = "autolith-0.55.0-patched-source";
     src = autolithSource;
     patches = [
       ./patches/inline-file-context.patch

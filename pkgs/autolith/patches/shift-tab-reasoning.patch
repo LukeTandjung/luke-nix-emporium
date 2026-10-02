@@ -1,33 +1,27 @@
-From 4603b3f8e114ff9371956627116da49a16247693 Mon Sep 17 00:00:00 2001
-From: LukeTandjung <lukelucus123@gmail.com>
-Date: Sun, 6 Sep 2026 17:45:59 +0100
-Subject: [PATCH] Restore Shift-Tab effort cycling with relative safe-boundary
- commands
+Subject: [PATCH] Cycle reasoning at safe command boundaries after native completion
 
----
 diff --git a/src/application/commands.lisp b/src/application/commands.lisp
-index 0d9a789..4932a7d 100644
 --- a/src/application/commands.lisp
 +++ b/src/application/commands.lisp
-@@ -607,6 +607,16 @@
+@@ -710,6 +710,16 @@
+                         :description (if (string= effort current)
                                           "current"
                                           "")))))
- 
++
 +(-> application--next-reasoning-effort (application) (option string))
 +(defun application--next-reasoning-effort (application)
 +  "Return the next configured model effort, wrapping after the last value."
 +  (let* ((configuration (application-configuration application))
 +         (efforts (configuration--reasoning-efforts-for
-+                   (configuration-model configuration)))
-+         (tail (member (configuration-reasoning-effort configuration)
++                   (config :model configuration)))
++         (tail (member (config :reasoning-effort configuration)
 +                       efforts :test #'string=)))
 +    (or (second tail) (first efforts))))
-+
+
  (-> application--persist-model-selection (application configuration) null)
  (defun application--persist-model-selection (application configuration)
-   "Persist CONFIGURATION for the active conversation and future processes."
-@@ -2128,7 +2138,7 @@ are forwarded to TERMINAL-UI-SELECT."
- 
+@@ -2716,7 +2726,7 @@
+
  (define-application-command application--builtin-effort-command
      (:name "/effort"
 -     :argument "[LEVEL]"
@@ -35,7 +29,7 @@ index 0d9a789..4932a7d 100644
       :description "pick the reasoning effort"
       :tip "sets the model's reasoning budget without changing models. Higher levels allow more reasoning and can take longer; available levels depend on the model."
       :busy-behavior :apply
-@@ -2137,7 +2147,11 @@ are forwarded to TERMINAL-UI-SELECT."
+@@ -2725,7 +2735,11 @@
      (application &optional (effort nil effort-supplied-p))
    (let ((effort
            (if effort-supplied-p
@@ -49,10 +43,9 @@ index 0d9a789..4932a7d 100644
                     (application--pick-reasoning-effort application)))))
      (when effort
 diff --git a/src/terminal/responsive-input.lisp b/src/terminal/responsive-input.lisp
-index 85bb8db..bff5bc3 100644
 --- a/src/terminal/responsive-input.lisp
 +++ b/src/terminal/responsive-input.lisp
-@@ -2714,6 +2714,9 @@ may execute immediately; other Lisp waits for the idle boundary."
+@@ -2714,6 +2714,9 @@
                  :queue-completion-p turn-active-p
                  :queue-editing-p follow-up-editing-p)
               (case action
@@ -63,10 +56,9 @@ index 85bb8db..bff5bc3 100644
                  (application-input-controller--clear-follow-up-edit controller))
                 (:submit
 diff --git a/src/terminal/ui.lisp b/src/terminal/ui.lisp
-index d4c295a..9ab69de 100644
 --- a/src/terminal/ui.lisp
 +++ b/src/terminal/ui.lisp
-@@ -3489,6 +3489,8 @@ thread."
+@@ -3218,6 +3218,8 @@
              (stringp (second event))
              (terminal-ui--attach-pasted-image ui (second event)))
         (values :changed nil))
@@ -75,33 +67,32 @@ index d4c295a..9ab69de 100644
        ((eq event :complete)
         (line-editor-handle-event editor '(:insert "    "))
         (values :changed nil))
-@@ -3563,10 +3565,12 @@ thread."
-                           (terminal-ui--reconcile-completions ui)))
-                    (effective-event
-                      (cond
--                       ((and (eq event :complete-previous)
--                             queue-editing-p
--                             (not (terminal-ui-completion-active-p ui)))
-+                       ((and (eq event :complete-previous) completion-items)
-+                        event)
-+                       ((and (eq event :complete-previous) queue-editing-p)
-                         ':cycle-queue)
-+                       ((eq event :complete-previous)
-+                        ':cycle-reasoning)
-                        ((and (eq event :complete)
-                              (null completion-items))
-                         (cond
+@@ -3289,10 +3291,12 @@
+                     (terminal-ui--reconcile-completions ui)))
+              (effective-event
+                (cond
+-                 ((and (eq event :complete-previous)
+-                       queue-editing-p
+-                       (not (terminal-ui-completion-active-p ui)))
++                 ((and (eq event :complete-previous) completion-items)
++                  event)
++                 ((and (eq event :complete-previous) queue-editing-p)
+                   ':cycle-queue)
++                 ((eq event :complete-previous)
++                  ':cycle-reasoning)
+                  ((and (eq event :complete)
+                        (null completion-items))
+                   (cond
 diff --git a/tests/application-tests.lisp b/tests/application-tests.lisp
-index 6ef567d..b6d0ade 100644
 --- a/tests/application-tests.lisp
 +++ b/tests/application-tests.lisp
-@@ -7220,6 +7220,76 @@
+@@ -7377,6 +7377,76 @@
        (platform-delete-directory-tree *platform* root :validate t :if-does-not-exist ':ignore)))
    nil)
- 
+
 +(defun test-application-shift-tab-cycle (application ui configuration)
 +  "Exercise relative cycling through the active-turn command queue."
-+  (let* ((model (configuration-model configuration))
++  (let* ((model (config :model configuration))
 +         (efforts (configuration--reasoning-efforts-for model))
 +         (controller
 +           (application-input-controller-create
@@ -140,7 +131,7 @@ index 6ef567d..b6d0ade 100644
 +           (dotimes (index 2)
 +             (application-input-controller--process-event controller :complete-previous))
 +           (test-assert
-+            (string= (configuration-reasoning-effort
++            (string= (config :reasoning-effort
 +                      (application-configuration application)) (first efforts))
 +            "busy key events defer configuration changes to a safe boundary")
 +           (test-assert
@@ -148,12 +139,12 @@ index 6ef567d..b6d0ade 100644
 +            "repeated busy cycling preserves the draft")
 +           (application-input-controller--apply-pending-commands controller)
 +           (test-assert
-+            (string= (configuration-reasoning-effort
++            (string= (config :reasoning-effort
 +                      (application-configuration application))
 +                     (nth (mod 2 (length efforts)) efforts))
 +            "two queued key events advance twice rather than reuse a stale target")
 +           (test-assert
-+            (string= (preference-state-reasoning-effort (preferences-load configuration))
++            (string= (getf (preferences-load-values configuration) :reasoning-effort)
 +                     (nth (mod 2 (length efforts)) efforts))
 +            "relative cycling persists through the normal effort command")
 +           (test-call-with-function-replacements
@@ -172,32 +163,21 @@ index 6ef567d..b6d0ade 100644
  (-> test-effort-switch () null)
  (defun test-effort-switch ()
    "Test in-place model and reasoning-effort configuration switching."
-@@ -7277,6 +7347,7 @@
+@@ -7421,6 +7491,7 @@
               (test-assert
-               (string= (preference-state-model preferences) "gpt-5.6-sol")
+               (string= (getf preferences :model) *default-model*)
                "switching effort saves the accompanying model default"))
 +           (test-application-shift-tab-cycle application ui configuration)
             (let ((updated (application-configuration application)))
-              (test-assert (equal (configuration-source-root updated)
-                                  (configuration-source-root configuration))
+              (test-assert (equal (config :source-root updated)
+                                  (config :source-root configuration))
 diff --git a/tests/terminal-tests.lisp b/tests/terminal-tests.lisp
-index 50e3570..15cef43 100644
 --- a/tests/terminal-tests.lisp
 +++ b/tests/terminal-tests.lisp
-@@ -3153,6 +3153,7 @@ sources keeps the tests deterministic under an interactive terminal."
-   (test-terminal-finalized-scrollback)
-   (test-terminal-resize-frame)
-   (test-terminal-relayed-resize)
-+  (test-terminal-shift-tab-priority)
-   (test-terminal-line-editor)
-   (test-terminal-history-replacement)
-   (test-terminal-image-attachments)
-@@ -2651,6 +2652,45 @@ sources keeps the tests deterministic under an interactive terminal."
-       (tool-registry-close-runtime-state next-registry)
-       (uiop:delete-directory-tree root :validate t :if-does-not-exist :ignore)))
+@@ -2559,6 +2559,45 @@
+                        "a narrow status row drops the worked segment first")))))
    nil)
-+
-+
+
 +(DEFUN TEST-TERMINAL-SHIFT-TAB-PRIORITY ()
 +  "Test Shift-Tab ownership order and draft preservation."
 +  (LET* ((TERMINAL (MAKE-INSTANCE 'RECORDING-TERMINAL :COLUMNS 80))
@@ -235,13 +215,15 @@ index 50e3570..15cef43 100644
 +                       "preserve this draft"))
 +         "reasoning cycling is the final Shift-Tab action and preserves the draft"))))
 +  NIL)
- 
- 
++
++
  (defclass prompt-recording-terminal (stream-terminal)
+   ((chunks :initform nil :accessor prompt-recording-terminal-chunks
+            :documentation "Captured application prompt controls.")
 diff --git a/tests/test-suites.lisp b/tests/test-suites.lisp
 --- a/tests/test-suites.lisp
 +++ b/tests/test-suites.lisp
-@@ -502,6 +502,7 @@
+@@ -542,6 +542,7 @@
    test-terminal-finalized-scrollback
    test-terminal-resize-frame
    test-terminal-relayed-resize
@@ -249,6 +231,3 @@ diff --git a/tests/test-suites.lisp b/tests/test-suites.lisp
    test-terminal-line-editor
    test-terminal-history-replacement
    test-terminal-image-attachments
--- 
-2.55.0
-
