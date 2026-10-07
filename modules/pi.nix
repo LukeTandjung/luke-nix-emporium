@@ -34,12 +34,49 @@ let
       (builtins.readDir extensionsDir));
 
   mcpConfig = cfg.mcp.extraConfig
-    // lib.optionalAttrs (cfg.mcp.settings != { }) { settings = cfg.mcp.settings; }
     // lib.optionalAttrs (cfg.mcp.servers != { }) { mcpServers = cfg.mcp.servers; };
 
-  effectiveSettings = cfg.settings // lib.optionalAttrs cfg.mcp.enable {
-    packages = lib.unique ((cfg.settings.packages or [ ]) ++ [ cfg.mcp.packageSource ]);
-  };
+  # Moves host-provided dependencies (typebox, @earendil-works/*) from
+  # dependencies to peerDependencies with a "*" range in installed extension
+  # packages. Installed copies of host modules create duplicate runtime
+  # instances, which the extension loader reports as warnings.
+  extensionPeerDepPatch = pkgs.writeText "pi-extension-peer-dependencies.mjs" ''
+    import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+    import { join } from "node:path";
+
+    const root = join(process.env.HOME, ".pi", "agent", "npm", "node_modules");
+    if (!existsSync(root)) process.exit(0);
+
+    const hostProvided = (name) => name === "typebox" || name.startsWith("@earendil-works/");
+
+    const topLevel = readdirSync(root);
+    const packages = [
+      ...topLevel.filter((entry) => !entry.startsWith("@")),
+      ...topLevel
+        .filter((entry) => entry.startsWith("@"))
+        .flatMap((scope) => readdirSync(join(root, scope)).map((name) => scope + "/" + name)),
+    ];
+
+    for (const pkg of packages) {
+      const manifestPath = join(root, pkg, "package.json");
+      if (!existsSync(manifestPath)) continue;
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      const dependencies = manifest.dependencies;
+      if (!dependencies) continue;
+      let changed = false;
+      for (const name of Object.keys(dependencies)) {
+        if (hostProvided(name)) {
+          delete dependencies[name];
+          manifest.peerDependencies = { ...(manifest.peerDependencies ?? {}), [name]: "*" };
+          changed = true;
+        }
+      }
+      if (changed) {
+        writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+        console.log("normalized peer dependencies in " + pkg);
+      }
+    }
+  '';
 
   # Bare "typebox" (v1.x) is a dependency of the Nix-packaged pi but may not be
   # available when a third-party pi binary (e.g. Architect's bundled copy) loads
@@ -85,31 +122,17 @@ in
     };
 
     mcp = {
-      enable = lib.mkEnableOption "MCP support through pi-mcp-adapter";
-
-      packageSource = lib.mkOption {
-        type = lib.types.str;
-        default = "npm:pi-mcp-adapter";
-        description = "Pi package source for the MCP adapter.";
-      };
-
-      settings = lib.mkOption {
-        type = jsonFormat.type;
-        default = { };
-        description = "pi-mcp-adapter settings written under `settings` in `~/.pi/agent/mcp.json`.";
-        example = lib.literalExpression ''
-          {
-            toolPrefix = "server";
-            idleTimeout = 10;
-            directTools = false;
-          }
-        '';
-      };
+      enable = lib.mkEnableOption "MCP support through the built-in mcp extension";
 
       servers = lib.mkOption {
         type = jsonFormat.type;
         default = { };
-        description = "MCP servers written under `mcpServers` in `~/.pi/agent/mcp.json`.";
+        description = ''
+          MCP servers written under `mcpServers` in `~/.pi/agent/mcp.json`, consumed by
+          pi's built-in `mcp` extension. Keep third-party MCP extensions such as
+          pi-mcp-adapter out of `settings.packages`; two MCP extensions cannot both
+          register `/mcp`.
+        '';
         example = lib.literalExpression ''
           {
             chrome-devtools = {
@@ -232,8 +255,8 @@ in
     ];
 
     home.file = lib.mergeAttrsList [
-      (lib.optionalAttrs (effectiveSettings != { }) {
-        ".pi/agent/settings.json".source = jsonFormat.generate "settings.json" effectiveSettings;
+      (lib.optionalAttrs (cfg.settings != { }) {
+        ".pi/agent/settings.json".source = jsonFormat.generate "settings.json" cfg.settings;
       })
 
       (lib.optionalAttrs (mcpConfig != { }) {
@@ -280,5 +303,16 @@ in
         ".pi/agent/APPEND_SYSTEM.md".text = cfg.context.appendSystemPrompt;
       })
     ];
+
+    # Keep npm extension packages current after every rebuild, then normalize
+    # their manifests. Best effort: an offline rebuild must not fail because
+    # of this step.
+    home.activation.updatePiExtensions = lib.hm.dag.entryAfter [ "checkLinkTargets" ] ''
+      export PATH="${pkgs.nodejs}/bin:$PATH"
+      if ! "${cfg.package}/bin/pi" update --extensions >"$HOME/.pi/agent/extensions-update.log" 2>&1; then
+        echo "warning: pi extension update failed; see $HOME/.pi/agent/extensions-update.log" >&2
+      fi
+      "${pkgs.nodejs}/bin/node" ${extensionPeerDepPatch}
+    '';
   };
 }
