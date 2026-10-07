@@ -15,8 +15,11 @@ let
   # which is both non-reproducible and blocked by the Nix sandbox. Keep these
   # snapshots in-tree so rebuilds do not depend on mutable live API responses.
   modelsDevData = ./model-catalogs/models-dev-api.json;
+  modelsDevDecision = ./model-catalogs/models-dev-decision.json;
   nvidiaModels = ./model-catalogs/nvidia-models.json;
   openrouterModels = ./model-catalogs/openrouter-models.json;
+  openrouterModelsImage = ./model-catalogs/openrouter-models-image.json;
+  openrouterModelsDecisions = ./model-catalogs/openrouter-models-decisions.json;
   aiGatewayModels = ./model-catalogs/ai-gateway-models.json;
   radiusConfig = ./model-catalogs/radius-config.json;
 
@@ -25,16 +28,16 @@ let
 in
 buildNpmPackage {
   pname = "pi";
-  version = "0.85.1-unstable-2026-09-19";
+  version = "1.0.5-unstable-2026-10-07";
 
   src = fetchFromGitHub {
     owner = "earendil-works";
     repo = "pi";
-    rev = "4d38031fbdbed43bc481ddf9c3c279005ab24674";
-    hash = "sha256-05Uv1Cfb0CPKKfr25nalwGFShEycyts7WjzQjarhzHs=";
+    rev = "f10993bc7f28145df1375f3ff39c7f5c4cfc05f0";
+    hash = "sha256-iTvCgeb64xlzZJXFAednRXxivIoc2aGmLIZ21+GKtAc=";
   };
 
-  npmDepsHash = "sha256-UHfLj8BVf2rk17+VpTfF0Vrjt/cM+vonYtv8jUn4/mo=";
+  npmDepsHash = "sha256-whxJZBv8qkVFk1Lzalqn5rawZZjeafKneHVFquWlG0g=";
 
   # Point the script's catalog fetches at the pinned snapshots.
   postPatch = ''
@@ -43,11 +46,14 @@ buildNpmPackage {
         'const response = await fetch("https://models.dev/api.json");' \
         'const response = ${localResponse modelsDevData};' \
       --replace-fail \
+        'const response = await fetch("https://models.dev/models.json?type=decision");' \
+        'const response = ${localResponse modelsDevDecision};' \
+      --replace-fail \
         'const response = await fetch(`''${NVIDIA_BASE_URL}/models`);' \
         'const response = ${localResponse nvidiaModels};' \
       --replace-fail \
-        'const response = await fetch("https://openrouter.ai/api/v1/models");' \
-        'const response = ${localResponse openrouterModels};' \
+        'const response = await fetch(`https://openrouter.ai/api/v1/models''${query}`);' \
+        'const response = new Response(await import("node:fs").then((m) => m.readFileSync(({ "": "${openrouterModels}", "?output_modalities=image": "${openrouterModelsImage}", "?output_modalities=decisions": "${openrouterModelsDecisions}" }[query] || "${openrouterModels}"), "utf8")));' \
       --replace-fail \
         'const response = await fetch(`''${AI_GATEWAY_MODELS_URL}/models`);' \
         'const response = ${localResponse aiGatewayModels};' \

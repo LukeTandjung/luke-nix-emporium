@@ -30,8 +30,11 @@ fetch() {
 }
 
 fetch "https://models.dev/api.json" "$catalog_dir/models-dev-api.json"
+fetch "https://models.dev/models.json?type=decision" "$catalog_dir/models-dev-decision.json"
 fetch "https://integrate.api.nvidia.com/v1/models" "$catalog_dir/nvidia-models.json"
 fetch "https://openrouter.ai/api/v1/models" "$catalog_dir/openrouter-models.json"
+fetch "https://openrouter.ai/api/v1/models?output_modalities=image" "$catalog_dir/openrouter-models-image.json"
+fetch "https://openrouter.ai/api/v1/models?output_modalities=decisions" "$catalog_dir/openrouter-models-decisions.json"
 fetch "https://ai-gateway.vercel.sh/v1/models" "$catalog_dir/ai-gateway-models.json"
 fetch "https://radius.pi.dev/v1/config" "$catalog_dir/radius-config.json"
 
