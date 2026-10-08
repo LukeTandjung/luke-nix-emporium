@@ -43,6 +43,7 @@
           pi_quint_toolchain = pkgs.callPackage ./pkgs/quint-toolchain { };
           autolith_paddle_ocr_mcp = pkgs.callPackage ./pkgs/autolith-paddle-ocr-mcp { };
           terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
+          tern = pkgs.callPackage ./pkgs/tern { };
           default = self.packages.${system}.leetgpu_cli;
         }
         // pkgs.lib.optionalAttrs (builtins.hasAttr system autolith.packages) {
@@ -66,6 +67,7 @@
         leetgpu = import ./modules/leetgpu.nix;
         pencil = import ./modules/pencil.nix;
         pi = import ./modules/pi.nix;
+        tern = import ./modules/tern.nix;
         default = {
           imports = [
             self.homeManagerModules.autolith
@@ -77,6 +79,7 @@
             self.homeManagerModules.leetgpu
             self.homeManagerModules.pencil
             self.homeManagerModules.pi
+            self.homeManagerModules.tern
           ];
         };
       };
