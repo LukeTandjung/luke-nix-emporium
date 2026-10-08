@@ -7,7 +7,7 @@
   nodejs,
   poppler-utils,
   makeWrapper,
-}:
+}: 
 
 let
   # Vendored snapshots of the model catalog APIs consumed by packages/ai's

@@ -33,6 +33,7 @@
           };
         in
         {
+          agent_browser = pkgs.callPackage ./pkgs/agent-browser { };
           bend = pkgs.callPackage ./pkgs/bend { };
           bookokrat = pkgs.callPackage ./pkgs/bookokrat { };
           claude_code = pkgs.callPackage ./pkgs/claude-code { };

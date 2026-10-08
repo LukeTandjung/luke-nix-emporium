@@ -11,6 +11,7 @@ let
   contextDir = ../pkgs/pi/context;
 
   quintToolchain = pkgs.callPackage ../pkgs/quint-toolchain { };
+  agentBrowser = pkgs.callPackage ../pkgs/agent-browser { };
 
   defaultSkills = lib.mapAttrs
     (name: _: skillsDir + "/${name}")
@@ -251,6 +252,7 @@ in
     home.packages = [
       cfg.package
       quintToolchain
+      agentBrowser
       pkgs.temurin-jre-bin-17
     ];
 
