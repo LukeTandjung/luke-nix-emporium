@@ -24,6 +24,8 @@ stdenv.mkDerivation {
     mkdir -p $out/lib/node_modules
     cp -r ./* $out/lib/node_modules/
     chmod +x $out/lib/node_modules/bin/agent-browser.js
+    find $out/lib/node_modules/bin -type f -name 'agent-browser-*' ! -name '*.js' \
+      -exec chmod +x {} \;
     makeWrapper $out/lib/node_modules/bin/agent-browser.js $out/bin/agent-browser \
       --prefix PATH : ${nodejs}/bin
     runHook postInstall
