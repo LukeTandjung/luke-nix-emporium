@@ -140,6 +140,10 @@ stdenv.mkDerivation (finalAttrs: {
   dontBuild = true;
   dontPatchELF = true;
 
+  # undmg exposes Tern.app beside the volume's dangling Applications symlink,
+  # so the generic unpacker cannot choose one directory as the source root.
+  sourceRoot = lib.optionalString stdenv.hostPlatform.isDarwin ".";
+
   installPhase = if stdenv.isDarwin then ''
     runHook preInstall
 
