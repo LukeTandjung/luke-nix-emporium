@@ -60,7 +60,7 @@ The Pi, Claude Code, and Autolith modules all use this directory. Autolith reads
 
 The shared `autoresearch` skill defines measured Git experiments under `.auto/`.
 
-Develop source-level Autolith changes against the pinned upstream release, with behavioral tests. Store local source patches in `pkgs/autolith/patches`. Configure external tools as upstream MCP packages when they are available.
+Develop source-level Autolith changes in the `LukeTandjung/autolith` fork against the pinned upstream release, with behavioral tests. Tag tested revisions and pin the tag here. Configure external tools as upstream MCP packages when they are available.
 
 ## PaddleOCR
 
@@ -74,28 +74,29 @@ The MCP server marks `paddle_ocr` as read-only and non-destructive. Autolith pro
 ## Dependency workaround
 
 Autolith v0.50.0 aligns its Nix `cl-skills` pin with `qlfile.lock`.
-The dependency override needed by v0.47.1 has been removed. This does not change
-the vendored source-patch workflow below.
+The dependency override needed by v0.47.1 has been removed.
 
-## Packaged source patches
+## Pinned custom source
 
-`pkgs/autolith/package.nix` applies these patches in order to Autolith **v0.63.0**:
+The `autolith` flake input pins tag **`luke-v0.63.0-1`** from the
+`LukeTandjung/autolith` fork. The fork carries each customization as an ordinary,
+testable commit instead of storing generated patch files in this repository.
 
-Upstream added path-only `@` completion in v0.50.3. Our inline patch still adds
-immutable file snapshots; when installed, its asynchronous selector owns `@`
-tokens instead of opening a second upstream path-completion menu.
+Upstream added path-only `@` completion in v0.50.3. The fork's inline feature
+also adds immutable file snapshots; its asynchronous selector owns `@` tokens
+instead of opening a second upstream path-completion menu.
 
-1. `inline-file-context.patch`: type `@` followed by a workspace file query,
+1. `Inline file context` commit: type `@` followed by a workspace file query,
    then select a match with Tab. The editor inserts a quoted path when needed.
    The submission carries the selected UTF-8 snapshot separately from the draft.
    Limits are 128 KiB per file and 256 KiB per submission.
-2. `shift-tab-reasoning.patch`: Shift-Tab cycles the model's supported reasoning
+2. `Shift-Tab reasoning cycling` commit: Shift-Tab cycles the model's supported reasoning
    efforts. Completion candidates take priority, then recalled queue editing,
    then reasoning. `/effort next` uses the same relative operation.
    During a turn, each press takes effect at a safe command boundary.
 
-These replace the v0.40.1 patches removed in `5ad0c17`. Rebase and test them when
-changing the upstream release. Build the package, not only the flake evaluation:
+Rebase the fork branch onto each new upstream release, run its behavioral tests,
+and publish a new immutable tag. Build the package, not only the flake evaluation:
 
 ```bash
 nix flake check
@@ -104,8 +105,8 @@ nix build .#autolith --no-link
 
 ### Repair notes
 
-The old Shift-Tab patch also contained partial repairs for the inline patch.
-The new patches separate those responsibilities. The review found:
+The two fork commits keep inline context and Shift-Tab responsibilities separate.
+The review found:
 
 - Shift-Tab calculated an absolute effort on the input thread. Repeated presses
   during a turn queued the same value. The command now resolves `next` when it runs.
@@ -126,7 +127,7 @@ The new patches separate those responsibilities. The review found:
 
 ### v0.63.0 compatibility
 
-- Rebased both patches onto the release source.
+- Rebased both customization commits onto the release source.
 - Kept upstream job-completion teardown and automatic-message metadata.
 - Kept upstream transcript click actions outside the UI presentation lock.
 - Migrated patched code, tests, and `init.lisp` to `config`,
@@ -149,7 +150,7 @@ Validation on **aarch64-darwin**:
   output, so this does not execute the Lisp suites).
 - `nix build .#autolith --no-link`: passed, including upstream image validation.
 - Packaged CLI `--version`: reports `autolith version 0.63.0` in an isolated home.
-- Both patches apply in order with `patch --fuzz=0`, without offsets.
+- Both customization commits are based directly on upstream v0.63.0.
 - Focused FiveAM run: **61 cases, 796 checks, zero failed cases**, covering
   `terminal`, `fullscreen`, `test-effort-switch`,
   `test-conversation-workspace-file-context`, and
