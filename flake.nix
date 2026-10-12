@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    autolith.url = "github:lambda-symbolics/autolith/v0.55.0";
+    autolith.url = "github:lambda-symbolics/autolith/v0.63.0";
   };
 
   outputs =
@@ -33,7 +33,6 @@
           };
         in
         {
-          agent_browser = pkgs.callPackage ./pkgs/agent-browser { };
           bend = pkgs.callPackage ./pkgs/bend { };
           bookokrat = pkgs.callPackage ./pkgs/bookokrat { };
           claude_code = pkgs.callPackage ./pkgs/claude-code { };
@@ -43,7 +42,6 @@
           pi_quint_toolchain = pkgs.callPackage ./pkgs/quint-toolchain { };
           autolith_paddle_ocr_mcp = pkgs.callPackage ./pkgs/autolith-paddle-ocr-mcp { };
           terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
-          tern = pkgs.callPackage ./pkgs/tern { };
           default = self.packages.${system}.leetgpu_cli;
         }
         // pkgs.lib.optionalAttrs (builtins.hasAttr system autolith.packages) {
@@ -67,7 +65,6 @@
         leetgpu = import ./modules/leetgpu.nix;
         pencil = import ./modules/pencil.nix;
         pi = import ./modules/pi.nix;
-        tern = import ./modules/tern.nix;
         default = {
           imports = [
             self.homeManagerModules.autolith
@@ -79,7 +76,6 @@
             self.homeManagerModules.leetgpu
             self.homeManagerModules.pencil
             self.homeManagerModules.pi
-            self.homeManagerModules.tern
           ];
         };
       };

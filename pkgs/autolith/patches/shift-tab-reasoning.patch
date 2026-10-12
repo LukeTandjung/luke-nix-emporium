@@ -1,13 +1,25 @@
-Subject: [PATCH] Cycle reasoning at safe command boundaries after native completion
+From 502009ff3a29a01075faad9a8251b89adf41630e Mon Sep 17 00:00:00 2001
+From: LukeTandjung <lukelucus123@gmail.com>
+Date: Mon, 12 Oct 2026 20:42:15 +0100
+Subject: [PATCH] Shift-Tab reasoning cycling
+
+---
+ src/application/commands.lisp      | 18 +++++++-
+ src/terminal/responsive-input.lisp |  3 ++
+ src/terminal/ui.lisp               | 10 +++--
+ tests/application-tests.lisp       | 71 ++++++++++++++++++++++++++++++
+ tests/terminal-tests.lisp          | 39 ++++++++++++++++
+ tests/test-suites.lisp             |  1 +
+ 6 files changed, 137 insertions(+), 5 deletions(-)
 
 diff --git a/src/application/commands.lisp b/src/application/commands.lisp
+index 97d64e8..cd2b626 100644
 --- a/src/application/commands.lisp
 +++ b/src/application/commands.lisp
-@@ -710,6 +710,16 @@
-                         :description (if (string= effort current)
+@@ -699,6 +699,16 @@ notice preference is on, so enabling it mid-session takes effect immediately."
                                           "current"
                                           "")))))
-+
+ 
 +(-> application--next-reasoning-effort (application) (option string))
 +(defun application--next-reasoning-effort (application)
 +  "Return the next configured model effort, wrapping after the last value."
@@ -17,11 +29,12 @@ diff --git a/src/application/commands.lisp b/src/application/commands.lisp
 +         (tail (member (config :reasoning-effort configuration)
 +                       efforts :test #'string=)))
 +    (or (second tail) (first efforts))))
-
++
  (-> application--persist-model-selection (application configuration) null)
  (defun application--persist-model-selection (application configuration)
-@@ -2716,7 +2726,7 @@
-
+   "Record CONFIGURATION's model and effort on the active conversation.
+@@ -2775,7 +2785,7 @@ The current value and its source sit in aligned columns of their own."
+ 
  (define-application-command application--builtin-effort-command
      (:name "/effort"
 -     :argument "[LEVEL]"
@@ -29,7 +42,7 @@ diff --git a/src/application/commands.lisp b/src/application/commands.lisp
       :description "pick the reasoning effort"
       :tip "sets the model's reasoning budget without changing models. Higher levels allow more reasoning and can take longer; available levels depend on the model."
       :busy-behavior :apply
-@@ -2725,7 +2735,11 @@
+@@ -2784,7 +2794,11 @@ The current value and its source sit in aligned columns of their own."
      (application &optional (effort nil effort-supplied-p))
    (let ((effort
            (if effort-supplied-p
@@ -43,9 +56,10 @@ diff --git a/src/application/commands.lisp b/src/application/commands.lisp
                     (application--pick-reasoning-effort application)))))
      (when effort
 diff --git a/src/terminal/responsive-input.lisp b/src/terminal/responsive-input.lisp
+index 5062cd0..4a2e367 100644
 --- a/src/terminal/responsive-input.lisp
 +++ b/src/terminal/responsive-input.lisp
-@@ -2714,6 +2714,9 @@
+@@ -2758,6 +2758,9 @@ may execute immediately; other Lisp waits for the idle boundary."
                  :queue-completion-p turn-active-p
                  :queue-editing-p follow-up-editing-p)
               (case action
@@ -56,9 +70,10 @@ diff --git a/src/terminal/responsive-input.lisp b/src/terminal/responsive-input.
                  (application-input-controller--clear-follow-up-edit controller))
                 (:submit
 diff --git a/src/terminal/ui.lisp b/src/terminal/ui.lisp
+index 18e4cd1..4652808 100644
 --- a/src/terminal/ui.lisp
 +++ b/src/terminal/ui.lisp
-@@ -3218,6 +3218,8 @@
+@@ -3449,6 +3449,8 @@ installed owner the thunk simply runs."
              (stringp (second event))
              (terminal-ui--attach-pasted-image ui (second event)))
         (values :changed nil))
@@ -67,29 +82,30 @@ diff --git a/src/terminal/ui.lisp b/src/terminal/ui.lisp
        ((eq event :complete)
         (line-editor-handle-event editor '(:insert "    "))
         (values :changed nil))
-@@ -3289,10 +3291,12 @@
-                     (terminal-ui--reconcile-completions ui)))
-              (effective-event
-                (cond
--                 ((and (eq event :complete-previous)
--                       queue-editing-p
--                       (not (terminal-ui-completion-active-p ui)))
-+                 ((and (eq event :complete-previous) completion-items)
-+                  event)
-+                 ((and (eq event :complete-previous) queue-editing-p)
-                   ':cycle-queue)
-+                 ((eq event :complete-previous)
-+                  ':cycle-reasoning)
-                  ((and (eq event :complete)
-                        (null completion-items))
-                   (cond
+@@ -3550,10 +3552,12 @@ released, so the action may present notices of its own."
+                           (terminal-ui--reconcile-completions ui)))
+                    (effective-event
+                      (cond
+-                       ((and (eq event :complete-previous)
+-                             queue-editing-p
+-                             (not (terminal-ui-completion-active-p ui)))
++                       ((and (eq event :complete-previous) completion-items)
++                        event)
++                       ((and (eq event :complete-previous) queue-editing-p)
+                         ':cycle-queue)
++                       ((eq event :complete-previous)
++                        ':cycle-reasoning)
+                        ((and (eq event :complete)
+                              (null completion-items))
+                         (cond
 diff --git a/tests/application-tests.lisp b/tests/application-tests.lisp
+index 636e16c..85c70ca 100644
 --- a/tests/application-tests.lisp
 +++ b/tests/application-tests.lisp
-@@ -7377,6 +7377,76 @@
+@@ -7612,6 +7612,76 @@
        (platform-delete-directory-tree *platform* root :validate t :if-does-not-exist ':ignore)))
    nil)
-
+ 
 +(defun test-application-shift-tab-cycle (application ui configuration)
 +  "Exercise relative cycling through the active-turn command queue."
 +  (let* ((model (config :model configuration))
@@ -163,7 +179,7 @@ diff --git a/tests/application-tests.lisp b/tests/application-tests.lisp
  (-> test-effort-switch () null)
  (defun test-effort-switch ()
    "Test in-place model and reasoning-effort configuration switching."
-@@ -7421,6 +7491,7 @@
+@@ -7656,6 +7726,7 @@
               (test-assert
                (string= (getf preferences :model) *default-model*)
                "switching effort saves the accompanying model default"))
@@ -172,12 +188,13 @@ diff --git a/tests/application-tests.lisp b/tests/application-tests.lisp
               (test-assert (equal (config :source-root updated)
                                   (config :source-root configuration))
 diff --git a/tests/terminal-tests.lisp b/tests/terminal-tests.lisp
+index 6444a6f..66b4b0e 100644
 --- a/tests/terminal-tests.lisp
 +++ b/tests/terminal-tests.lisp
-@@ -2559,6 +2559,45 @@
-                        "a narrow status row drops the worked segment first")))))
+@@ -2887,6 +2887,45 @@ Resize tests drive size changes through COLUMNS and LINES."
    nil)
-
+ 
+ 
 +(DEFUN TEST-TERMINAL-SHIFT-TAB-PRIORITY ()
 +  "Test Shift-Tab ownership order and draft preservation."
 +  (LET* ((TERMINAL (MAKE-INSTANCE 'RECORDING-TERMINAL :COLUMNS 80))
@@ -221,9 +238,10 @@ diff --git a/tests/terminal-tests.lisp b/tests/terminal-tests.lisp
    ((chunks :initform nil :accessor prompt-recording-terminal-chunks
             :documentation "Captured application prompt controls.")
 diff --git a/tests/test-suites.lisp b/tests/test-suites.lisp
+index 2833a1a..5e4a32e 100644
 --- a/tests/test-suites.lisp
 +++ b/tests/test-suites.lisp
-@@ -542,6 +542,7 @@
+@@ -765,6 +765,7 @@
    test-terminal-finalized-scrollback
    test-terminal-resize-frame
    test-terminal-relayed-resize
@@ -231,3 +249,6 @@ diff --git a/tests/test-suites.lisp b/tests/test-suites.lisp
    test-terminal-line-editor
    test-terminal-history-replacement
    test-terminal-image-attachments
+-- 
+2.55.0
+
