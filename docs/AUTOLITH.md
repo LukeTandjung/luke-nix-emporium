@@ -7,7 +7,6 @@ This repository pins the Autolith package as a flake input. It stores the user c
 - `pkgs/agent-skills`: shared `SKILL.md` sources for Autolith, Pi, and Claude Code
 - `pkgs/autolith/init.lisp`: global executable initialization
 - `pkgs/autolith/package.nix`: package builder for the locked upstream source
-- `pkgs/autolith/patches`: source patches for the pinned Autolith release
 - `pkgs/autolith/mcp.nix`: generated MCP configuration
 - `pkgs/autolith-paddle-ocr-mcp`: local PaddleOCR-VL MCP server
 - `modules/autolith.nix`: Home Manager module
@@ -60,7 +59,7 @@ The Pi, Claude Code, and Autolith modules all use this directory. Autolith reads
 
 The shared `autoresearch` skill defines measured Git experiments under `.auto/`.
 
-Develop source-level Autolith changes in the `LukeTandjung/autolith` fork against the pinned upstream release, with behavioral tests. Tag tested revisions and pin the tag here. Configure external tools as upstream MCP packages when they are available.
+Develop source-level Autolith changes in the `LukeTandjung/autolith` fork against the pinned upstream release, with behavioral tests. Lock tested fork revisions here. Configure external tools as upstream MCP packages when they are available.
 
 ## PaddleOCR
 
@@ -78,9 +77,9 @@ The dependency override needed by v0.47.1 has been removed.
 
 ## Pinned custom source
 
-The `autolith` flake input pins tag **`luke-v0.63.0-1`** from the
-`LukeTandjung/autolith` fork. The fork carries each customization as an ordinary,
-testable commit instead of storing generated patch files in this repository.
+The `autolith` input follows **`luke/v0.63.0-custom`** in the
+`LukeTandjung/autolith` fork. `flake.lock` selects tested commit **`7a60aa00`**.
+Customizations are ordinary source commits in that fork.
 
 Upstream added path-only `@` completion in v0.50.3. The fork's inline feature
 also adds immutable file snapshots; its asynchronous selector owns `@` tokens
@@ -91,12 +90,26 @@ instead of opening a second upstream path-completion menu.
    The submission carries the selected UTF-8 snapshot separately from the draft.
    Limits are 128 KiB per file and 256 KiB per submission.
 2. `Shift-Tab reasoning cycling` commit: Shift-Tab cycles the model's supported reasoning
-   efforts. Completion candidates take priority, then recalled queue editing,
-   then reasoning. `/effort next` uses the same relative operation.
+   efforts. Explicit completions take priority; Shift-Tab cycles recalled queued
+   drafts ahead of passive completions. `/effort next` uses the same relative operation.
    During a turn, each press takes effect at a safe command boundary.
+3. Native fullscreen session sidebar with grouped child/RLM sessions, isolated
+   read-only conversation browsing and bounded trace paging.
+4. Durable tool-free planner/executor routing through `/planner`, with independent
+   model selection and incremental acknowledged conversation deltas.
+5. NInfer provider with dynamic served-model discovery, reasoning history and
+   shared OpenAI-compatible transport/retries.
+6. Persistent established sessions and host sleep inhibition, configurable through
+   `:persistent-sessions-p` and `:prevent-session-sleep-p`.
+7. Project `.pi/skills/` discovery after `.autolith/skills/`, and bounded cumulative
+   child token usage without request-sized attribution metadata.
 
-Rebase the fork branch onto each new upstream release, run its behavioral tests,
-and publish a new immutable tag. Build the package, not only the flake evaluation:
+The native source revision passed 545 cases and 6,226 assertions, including
+recovery probes. Home Manager installs deployment configuration; these features
+are compiled into the package rather than loaded from extension files.
+
+Rebase the fork branch onto each new upstream release and lock a tested revision.
+Build the package, not only the flake evaluation:
 
 ```bash
 nix flake check
@@ -186,11 +199,12 @@ the installed initialization file works without it.
 
 ## Update the Autolith package
 
-Change the Autolith release tag in `flake.nix`. Then update the lock file and run the checks:
+Select the tested fork branch or release tag in `flake.nix`, then update and check:
 
 ```bash
 nix flake update autolith
-nix flake check
+nix flake check --no-build
+nix build .#autolith --no-link
 ```
 
 Review upstream source and release notes before an update because `init.lisp` uses Autolith's Lisp API.

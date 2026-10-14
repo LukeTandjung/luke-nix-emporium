@@ -6,16 +6,16 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1791840114,
-        "narHash": "sha256-6D83K4PvsFyp19Q8nEjKZevySb9zA52vAbyxS0UX8Zg=",
+        "lastModified": 1791981948,
+        "narHash": "sha256-jE4jFznQn1VR32L23YUNaO/7p2yiPHWwAZGXvFHmeuY=",
         "owner": "LukeTandjung",
         "repo": "autolith",
-        "rev": "de9a26a63d0bc5c14e4a26fdae68be5d6351ae67",
+        "rev": "7a60aa00bb3be78e02bafe5ee2e609d40f0c79dd",
         "type": "github"
       },
       "original": {
         "owner": "LukeTandjung",
-        "ref": "luke-v0.63.0-1",
+        "ref": "luke/v0.63.0-custom",
         "repo": "autolith",
         "type": "github"
       }
