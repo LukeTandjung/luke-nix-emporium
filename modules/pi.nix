@@ -251,6 +251,7 @@ in
     # sessions without a system-wide Java installation.
     home.packages = [
       cfg.package
+      (pkgs.callPackage ../pkgs/effect-solutions { })
       quintToolchain
       agentBrowser
       pkgs.temurin-jre-bin-17

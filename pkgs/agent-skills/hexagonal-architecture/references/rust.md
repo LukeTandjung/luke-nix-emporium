@@ -203,14 +203,13 @@ This is an architectural signature, not a mandate to accumulate many generic
 parameters. If the dependency list grows, define one cohesive
 application-dependencies record only when it lowers cognitive load.
 
-## Repositories and adapters
+## Persistence ports and adapters
 
-Repositories contain concrete SQL/query bindings, transaction-executor use, row
-decoding, and database-specific persistence types. They are not ports merely
-because they access data.
-
-Postgres adapters wrap repositories to implement application-owned port traits.
-This keeps query/driver shapes from defining app contracts.
+There is no separate repository layer. Application-owned port traits describe
+cohesive storage capabilities. Postgres adapters implement them directly and own
+SQL/query bindings, transaction-executor use, row decoding, and database-specific
+types. Query helpers stay private inside the adapter; driver shapes must not
+define app contracts.
 
 - Postgres adapters own SQL/driver knowledge and map rows into core/application
   types.
@@ -234,7 +233,7 @@ This keeps query/driver shapes from defining app contracts.
 
 Use the actual transaction type directly or hide it behind one concrete opaque
 context understood by Postgres adapters. Do not build a generic unit-of-work
-framework. Do not open one transaction per repository call when a use case
+framework. Do not open one transaction per port operation when a use case
 requires atomicity.
 
 Cross-process effects follow the same persisted outbox policy as TypeScript
@@ -315,7 +314,7 @@ forwarding tests.
 - [ ] Dynamic dispatch appears only for a runtime need.
 - [ ] Async tasks have explicit ownership and shutdown.
 - [ ] Transactions do not span arbitrary network effects.
-- [ ] Repositories remain concrete persistence code; Postgres adapters implement
-      app-owned traits.
-- [ ] API DTOs do not leak into core/ports/app/adapters/repositories.
+- [ ] No repository layer exists; Postgres adapters implement app-owned
+      persistence traits and own queries and row decoding.
+- [ ] API DTOs do not leak into core/ports/app/adapters.
 - [ ] Outbox tasks have explicit ownership, cancellation, and shutdown draining.

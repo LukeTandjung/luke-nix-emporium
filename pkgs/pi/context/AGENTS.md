@@ -46,5 +46,5 @@ The following CLI utilities are available and may be used when helpful: `ast-gre
 not "import ... from './file'".
 - All arrays should be defined as Array<type>, not type[].
 - Do not use type assertions (... as type).
-- Unless stated otherwise, TypeScript is only used in the React frontend. The frontend uses the BaseUI Headless Component Library and Effect-TS. For Effect-TS, use the effect-docs skill to fetch documentation.
-- If TypeScript is used for the Bun backend, use Elysia.js and Effect-TS. For Effect-TS, use the effect-docs skill to fetch documentation.
+- Unless stated otherwise, TypeScript is only used in the React frontend. The frontend uses the BaseUI Headless Component Library and Effect-TS. For Effect-TS, use the effect-solutions skill to look up patterns and verify APIs against the project's installed Effect version.
+- If TypeScript is used for the Bun backend, use Elysia.js and Effect-TS. For Effect-TS, use the effect-solutions skill to look up patterns and verify APIs against the project's installed Effect version.

@@ -61,6 +61,7 @@ in
     extraPackages = lib.mkOption {
       type = lib.types.listOf lib.types.package;
       default = [
+        (pkgs.callPackage ../pkgs/effect-solutions { })
         quintToolchain
         pkgs.temurin-jre-bin-17
         pkgs.poppler-utils

@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 
@@ -14,6 +15,10 @@ in
   };
 
   config = {
+    home.packages = lib.mkIf cfg.skills.enable [
+      (pkgs.callPackage ../pkgs/effect-solutions { })
+    ];
+
     # Delta reads AGENT.md before AGENTS.md; use the preferred name so an
     # existing fallback AGENTS.md cannot silently shadow the shared rules.
     home.file = lib.mkMerge [

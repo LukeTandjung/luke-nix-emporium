@@ -34,6 +34,7 @@
         in
         {
           bend = pkgs.callPackage ./pkgs/bend { };
+          effect_solutions = pkgs.callPackage ./pkgs/effect-solutions { };
           bookokrat = pkgs.callPackage ./pkgs/bookokrat { };
           claude_code = pkgs.callPackage ./pkgs/claude-code { };
           leetgpu_cli = pkgs.callPackage ./pkgs/leetgpu-cli { };

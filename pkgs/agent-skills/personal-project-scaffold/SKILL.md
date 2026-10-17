@@ -1,11 +1,29 @@
 ---
 name: personal-project-scaffold
-description: Creates a new personal project from Luke T's private GitHub project-skeleton template. Use when Luke asks to scaffold, bootstrap, initialize, or create a personal project repository with the standard Deno, Cargo, devenv, Nix, PostgreSQL, and migration structure.
+description: Creates a personal project from Luke T's private project-skeleton template with Deno, Cargo, devenv, PostgreSQL, Effect tooling, and anti-slop. Use when scaffolding or initializing a personal repository, or updating the canonical template.
 ---
 
 # Personal Project Scaffold
 
 Create new repositories from `LukeTandjung/project-skeleton`. The template is the canonical source of project files; do not manually copy its contents or duplicate them in this skill.
+
+## Updating the template
+
+When Luke asks to change the scaffold itself:
+
+1. Reuse `~/Projects/project-skeleton` (or the existing checkout Luke specifies).
+   Verify its Git remote is `LukeTandjung/project-skeleton`.
+2. Read its `AGENTS.md` and inspect the working tree. If it is clean and on the
+   template's tracked branch, update it with `git pull --ff-only`. If it has local
+   changes, another branch, or diverged history, preserve that work and resolve the
+   situation with Luke; do not reset, auto-stash, or create a replacement clone.
+3. Clone the template only if no local checkout exists. If the expected directory
+   exists but is not the template checkout, stop rather than overwrite it.
+4. Edit and validate that same checkout. Do not generate a new application merely
+   to update the template, and do not clone again on subsequent updates.
+
+This skill describes the workflow; the template repository owns the project files.
+Do not commit or push without being asked.
 
 ## Gather requirements
 
@@ -73,9 +91,27 @@ Inside the cloned project:
    AGENTS.md
    ```
 
-5. Run:
+5. Confirm the template's Effect tooling is present:
+
+   - devenv provides the pinned `effect-solutions` CLI.
+   - Deno manages `effect`, `@maple-dev/effect-orm`, `@typeonce/effect-machine`,
+     and Alchemy, with a committed `deno.lock`.
+   - `tools/oxlint/anti-slop/` includes vendored rules, licenses, and provenance;
+     `.oxlintrc.json` enables generic and Effect rules. Oxlint and `@oxlint/plugins`
+     use the same exact version.
+   - PostgreSQL guidance uses effect-orm in adapters, not Zapatos or a repository layer.
+   - `docs/cloudflare-workflow-pool.md` is an opt-in recipe. Do not install the
+     unpublished upstream package, vendor it, or create cloud resources by default.
+   - Alchemy's CLI uses Node supplied by devenv for compatibility; Deno still owns
+     the dependency graph and tasks. Do not add a second package-manager workspace.
+
+6. Run in the declared development environment:
 
    ```bash
+   deno install --frozen
+   effect-solutions list
+   effect-solutions show services-and-layers
+   deno task alchemy --help
    deno task check
    deno task test
    nix flake check --no-build
@@ -84,6 +120,10 @@ Inside the cloned project:
    ```
 
 Do not run `direnv allow` automatically; that is a local trust decision for Luke.
+Do not deploy, destroy, authenticate to cloud providers, warm workflow pools, or
+blanket-approve dependency install scripts as part of scaffold verification.
+If the remote template lacks a required tool, report the template revision and
+missing item rather than silently installing unpinned packages into the new project.
 
 If validation modifies generated files, inspect the changes and explain them rather than committing or discarding them automatically.
 
