@@ -3,6 +3,10 @@
 let
   cfg = config.programs.pi;
   jsonFormat = pkgs.formats.json { };
+  sharedMcp = import ../pkgs/agent-mcp {
+    inherit lib pkgs;
+    servers = config.programs.agent-mcp.servers;
+  };
   pathOrLines = lib.types.either lib.types.path lib.types.lines;
 
   skillsDir = ../pkgs/agent-skills;
@@ -34,8 +38,9 @@ let
         || (type == "directory" && builtins.pathExists (extensionsDir + "/${name}/package.nix")))
       (builtins.readDir extensionsDir));
 
-  mcpConfig = cfg.mcp.extraConfig
-    // lib.optionalAttrs (cfg.mcp.servers != { }) { mcpServers = cfg.mcp.servers; };
+  mcpServers = sharedMcp.jsonFor "pi" // cfg.mcp.servers;
+  mcpConfig = lib.optionalAttrs cfg.mcp.enable (cfg.mcp.extraConfig
+    // lib.optionalAttrs (mcpServers != { }) { inherit mcpServers; });
 
   # Moves host-provided dependencies (typebox, @earendil-works/*) from
   # dependencies to peerDependencies with a "*" range in installed extension
@@ -87,6 +92,8 @@ let
   typebox = cfg.package + "/lib/pi-mono/node_modules/typebox";
 in
 {
+  imports = [ ./agent-mcp.nix ];
+
   options.programs.pi = {
     enable = lib.mkEnableOption "pi coding agent";
 
@@ -123,7 +130,7 @@ in
     };
 
     mcp = {
-      enable = lib.mkEnableOption "MCP support through the built-in mcp extension";
+      enable = lib.mkEnableOption "MCP support through the built-in mcp extension" // { default = true; };
 
       servers = lib.mkOption {
         type = jsonFormat.type;
@@ -255,7 +262,7 @@ in
       quintToolchain
       agentBrowser
       pkgs.temurin-jre-bin-17
-    ];
+    ] ++ lib.optionals cfg.mcp.enable (sharedMcp.packagesFor "pi");
 
     home.file = lib.mergeAttrsList [
       (lib.optionalAttrs (cfg.settings != { }) {

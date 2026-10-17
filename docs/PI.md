@@ -138,44 +138,32 @@ settings = {
 
 ### `programs.pi.mcp.enable`
 
-Type: `boolean` | Default: `false`
+Type: `boolean` | Default: `true`
 
-Whether to enable MCP support through `pi-mcp-adapter`. This adds `npm:pi-mcp-adapter` to `~/.pi/agent/settings.json`.
+Writes managed configuration for Pi's built-in MCP client and installs selected
+shared server packages. Do not install `pi-mcp-adapter` alongside it: that
+extension replaces the built-in `/mcp` implementation.
 
-### `programs.pi.mcp.packageSource`
+### Shared servers
 
-Type: `string` | Default: `"npm:pi-mcp-adapter"`
-
-Pi package source used when `programs.pi.mcp.enable` is enabled.
-
-### `programs.pi.mcp.settings`
-
-Type: `attrs` | Default: `{ }`
-
-pi-mcp-adapter settings written under `settings` in `~/.pi/agent/mcp.json`.
+Use [`programs.agent-mcp.servers`](AGENT-MCP.md) to configure a server once for
+all compatible agents. REA is included by default as a local `rea mcp` server.
+OAuth login remains interactive and its tokens stay outside Nix-managed files.
 
 ### `programs.pi.mcp.servers`
 
 Type: `attrs` | Default: `{ }`
 
-MCP servers written under `mcpServers` in `~/.pi/agent/mcp.json`.
+Pi-specific entries written under `mcpServers` in `~/.pi/agent/mcp.json`. An entry
+replaces the shared server with the same name. Use this for Pi-only fields such
+as `exposure`, `toolExposure`, and OAuth client registration settings.
 
-```nix
-mcp = {
-  enable = true;
-  settings = {
-    toolPrefix = "server";
-    idleTimeout = 10;
-  };
-  servers = {
-    pencil = {
-      command = "${pkgs.pencil}/opt/pencil/resources/app.asar.unpacked/out/mcp-server-linux-x64";
-      args = [ "--app" "desktop" ];
-      env = { };
-    };
-  };
-};
-```
+### `programs.pi.mcp.extraConfig`
+
+Type: `attrs` | Default: `{ }`
+
+Additional top-level settings for the built-in MCP client, such as
+`autoEnableCodemode`. This is not the old adapter's `settings` object.
 
 ### `programs.pi.skills`
 

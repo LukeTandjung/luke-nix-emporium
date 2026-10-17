@@ -7,7 +7,9 @@ This repository pins the Autolith package as a flake input. It stores the user c
 - `pkgs/agent-skills`: shared `SKILL.md` sources for Autolith, Pi, and Claude Code
 - `pkgs/autolith/init.lisp`: global executable initialization
 - `pkgs/autolith/package.nix`: package builder for the locked upstream source
-- `pkgs/autolith/mcp.nix`: generated MCP configuration
+- `modules/agent-mcp.nix`: shared typed MCP catalogue
+- `pkgs/agent-mcp`: client renderers and package selection
+- `pkgs/autolith/mcp.nix`: MCP document envelope and legacy direct renderer
 - `pkgs/autolith-paddle-ocr-mcp`: local PaddleOCR-VL MCP server
 - `modules/autolith.nix`: Home Manager module
 
@@ -31,6 +33,11 @@ This installs Autolith and the tool packages required by the shared skills. It w
 ~/.config/autolith/skills/<name>/
 ~/.config/autolith/agents/<name>.sexp
 ```
+
+REA and the PaddleOCR MCP server are enabled by default through the
+[shared MCP catalogue](AGENT-MCP.md). Configure new servers under
+`programs.agent-mcp.servers`; existing `programs.autolith.paddleOcr` options
+remain compatibility defaults for the shared `paddle-ocr` entry.
 
 The PaddleOCR MCP server is enabled by default. The PaddleOCR server uses `http://127.0.0.1:8080/v1` and model `paddleocr-vl-1.6`.
 
@@ -77,8 +84,8 @@ The dependency override needed by v0.47.1 has been removed.
 
 ## Pinned custom source
 
-The `autolith` input follows **`luke/v0.63.0-custom`** in the
-`LukeTandjung/autolith` fork. `flake.lock` selects tested commit **`7a60aa00`**.
+The `autolith` input follows **`luke/v0.65.1-custom`** in the
+`LukeTandjung/autolith` fork. `flake.lock` selects tested commit **`5ed208fc`**.
 Customizations are ordinary source commits in that fork.
 
 Upstream added path-only `@` completion in v0.50.3. The fork's inline feature
@@ -104,8 +111,8 @@ instead of opening a second upstream path-completion menu.
 7. Project `.pi/skills/` discovery after `.autolith/skills/`, and bounded cumulative
    child token usage without request-sized attribution metadata.
 
-The native source revision passed 545 cases and 6,226 assertions, including
-recovery probes. Home Manager installs deployment configuration; these features
+The native source revision passed 976 cases and 13,128 checks, plus recovery
+probes, in a Nix FHS test environment with its native libraries and recovery core. Home Manager installs deployment configuration; these features
 are compiled into the package rather than loaded from extension files.
 
 Rebase the fork branch onto each new upstream release and lock a tested revision.
@@ -137,6 +144,16 @@ The review found:
 - The inline patch alone discarded editor action values through a misplaced
   cleanup form. Its token predicate also returned a character despite its boolean
   type. Both repairs now belong to the inline patch.
+
+### v0.65.1 compatibility
+
+- Preserved all custom features while rebasing onto v0.65.1.
+- Kept upstream's bounded child-usage implementation and onboarding startup flow.
+- Passed the fork's typed-ahead boot-screen decision into the new startup helper.
+- Disabled interactive boot screens in ordinary isolated test configurations.
+- Replaced the sidebar test's hard-coded `/bin/ln` with the host fixture protocol.
+- Verified REA discovery through the real MCP manager using compact input schemas
+  and omitted advertised output schemas, without increasing client safety limits.
 
 ### v0.63.0 compatibility
 

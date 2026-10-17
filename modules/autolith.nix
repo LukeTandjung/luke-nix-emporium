@@ -3,6 +3,10 @@
 
 let
   cfg = config.programs.autolith;
+  sharedMcp = import ../pkgs/agent-mcp {
+    inherit lib pkgs;
+    servers = config.programs.agent-mcp.servers;
+  };
   pathOrLines = lib.types.either lib.types.path lib.types.lines;
   approvalType = lib.types.enum [ "prompt" "read-only" "allow" "deny" ];
   skillsDir = ../pkgs/agent-skills;
@@ -17,13 +21,10 @@ let
     }
     else throw "Autolith does not provide a package for ${pkgs.system}";
   quintToolchain = pkgs.callPackage ../pkgs/quint-toolchain { };
-  paddleOcrPackage = cfg.paddleOcr.package;
-  mcpEnabled = cfg.paddleOcr.enable;
+  mcpEnabled = sharedMcp.forClient "autolith" != { };
   mcpConfig = import ../pkgs/autolith/mcp.nix {
     inherit lib;
-    paddleOcrPackage = if cfg.paddleOcr.enable then paddleOcrPackage else null;
-    paddleOcrApproval = cfg.paddleOcr.approval;
-    endpointEnvironmentVariable = cfg.paddleOcr.endpointEnvironmentVariable;
+    extraServers = sharedMcp.autolithServers;
   };
   fileValue = value:
     if builtins.isPath value
@@ -31,6 +32,8 @@ let
     else { text = value; };
 in
 {
+  imports = [ ./agent-mcp.nix ];
+
   options.programs.autolith = {
     enable = lib.mkEnableOption "Autolith";
 
@@ -109,7 +112,25 @@ in
 
     home.packages = [ cfg.package ]
       ++ cfg.extraPackages
-      ++ lib.optional cfg.paddleOcr.enable paddleOcrPackage;
+      ++ sharedMcp.packagesFor "autolith";
+
+    # Keep existing PaddleOCR options working, but register the result through
+    # the same catalogue as every other server. Explicit shared values win.
+    programs.agent-mcp.servers.paddle-ocr = {
+      enable = lib.mkDefault cfg.paddleOcr.enable;
+      clients = lib.mkDefault [ "autolith" ];
+      package = lib.mkDefault cfg.paddleOcr.package;
+      envFrom = lib.mkDefault (lib.optionalAttrs (cfg.paddleOcr.endpointEnvironmentVariable != null) {
+        PADDLE_OCR_URL = cfg.paddleOcr.endpointEnvironmentVariable;
+      });
+      autolith = {
+        approval = lib.mkDefault cfg.paddleOcr.approval;
+        startupTimeoutSeconds = lib.mkDefault 15;
+        toolTimeoutSeconds = lib.mkDefault 1800;
+        childTools = lib.mkDefault [ "paddle_ocr" ];
+        trustedReadOnlyTools = lib.mkDefault [ "paddle_ocr" ];
+      };
+    };
 
     xdg.configFile = lib.mkMerge [
       (lib.optionalAttrs (cfg.init != null) {

@@ -7,17 +7,27 @@
 
 let
   cfg = config.programs.zed-delta;
+  sharedMcp = import ../pkgs/agent-mcp {
+    inherit lib pkgs;
+    servers = config.programs.agent-mcp.servers;
+  };
 in
 {
+  imports = [ ./agent-mcp.nix ];
+
   options.programs.zed-delta = {
     skills.enable = lib.mkEnableOption "shared personal skills for Delta, without installing the app";
     context.enable = lib.mkEnableOption "shared personal AGENTS.md instructions for Delta";
   };
 
   config = {
-    home.packages = lib.mkIf cfg.skills.enable [
+    home.packages = lib.mkIf cfg.skills.enable ([
       (pkgs.callPackage ../pkgs/effect-solutions { })
-    ];
+    ] ++ sharedMcp.packagesFor "delta");
+
+    xdg.configFile."agent-mcp/delta-setup.md" = lib.mkIf cfg.skills.enable {
+      text = sharedMcp.deltaGuide;
+    };
 
     # Delta reads AGENT.md before AGENTS.md; use the preferred name so an
     # existing fallback AGENTS.md cannot silently shadow the shared rules.

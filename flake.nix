@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    autolith.url = "github:LukeTandjung/autolith?ref=luke/v0.63.0-custom";
+    autolith.url = "github:LukeTandjung/autolith?ref=luke/v0.65.1-custom";
   };
 
   outputs =
@@ -40,6 +40,7 @@
           leetgpu_cli = pkgs.callPackage ./pkgs/leetgpu-cli { };
           pencil = pkgs.callPackage ./pkgs/pencil { };
           pi = pkgs.callPackage ./pkgs/pi { };
+          rea = pkgs.callPackage ./pkgs/rea { };
           pi_quint_toolchain = pkgs.callPackage ./pkgs/quint-toolchain { };
           autolith_paddle_ocr_mcp = pkgs.callPackage ./pkgs/autolith-paddle-ocr-mcp { };
           terminal_grotesque = pkgs.callPackage ./pkgs/terminal-grotesque { };
@@ -57,7 +58,14 @@
         }
       );
 
+      checks = genAttrs supportedSystems (system: {
+        agent-mcp = import ./tests/agent-mcp.nix {
+          pkgs = import nixpkgs { inherit system; };
+        };
+      });
+
       homeManagerModules = {
+        agent-mcp = import ./modules/agent-mcp.nix;
         autolith = import ./modules/autolith.nix { inherit autolith; };
         bend = import ./modules/bend.nix;
         bookokrat = import ./modules/bookokrat.nix;

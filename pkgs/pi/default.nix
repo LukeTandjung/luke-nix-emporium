@@ -28,16 +28,16 @@ let
 in
 buildNpmPackage {
   pname = "pi";
-  version = "1.0.5-unstable-2026-10-07";
+  version = "1.3.0-unstable-2026-10-16";
 
   src = fetchFromGitHub {
     owner = "earendil-works";
     repo = "pi";
-    rev = "f10993bc7f28145df1375f3ff39c7f5c4cfc05f0";
-    hash = "sha256-iTvCgeb64xlzZJXFAednRXxivIoc2aGmLIZ21+GKtAc=";
+    rev = "8efd314fa3d3232ce197d8d7a6a5660530b9d83e";
+    hash = "sha256-GeubA8WHmtdtUAAjgxXi66ueIN6LQtJ5NGPVnVQayDU=";
   };
 
-  npmDepsHash = "sha256-whxJZBv8qkVFk1Lzalqn5rawZZjeafKneHVFquWlG0g=";
+  npmDepsHash = "sha256-+gFyvrhkCsF99oNvs0gBmLXnDW0hWnZI/wFId7UbI6Q=";
 
   # Point the script's catalog fetches at the pinned snapshots.
   postPatch = ''

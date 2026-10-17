@@ -3,6 +3,7 @@
   paddleOcrPackage ? null,
   paddleOcrApproval ? "prompt",
   endpointEnvironmentVariable ? null,
+  extraServers ? [ ],
 }:
 
 let
@@ -53,5 +54,5 @@ in
 ''
   (:version 1
    :servers
-   (${lib.concatStringsSep "\n  " servers}))
+   (${lib.concatStringsSep "\n  " (servers ++ extraServers)}))
 ''

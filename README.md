@@ -13,6 +13,7 @@ A personal collection of Nix flake packages for software not yet available in ni
 | claude_desktop | Claude Desktop app for Linux |
 | [LeetGPU CLI](docs/LEETGPU.md) | CLI tool for [LeetGPU](https://leetgpu.com), a platform for GPU programming challenges |
 | [pi](docs/PI.md) | A terminal-based coding agent with multi-model support |
+| [rea](docs/AGENT-MCP.md) | Reverse Engineer Anything CLI and MCP server |
 | terminal-grotesque | Terminal Grotesque typeface by Raphaël Bastide |
 
 ## Usage
@@ -41,6 +42,7 @@ Add this flake to your inputs:
     inputs.luke-pkgs.packages.${pkgs.system}.claude_desktop # Linux only
     inputs.luke-pkgs.packages.${pkgs.system}.leetgpu_cli
     inputs.luke-pkgs.packages.${pkgs.system}.pi
+    inputs.luke-pkgs.packages.${pkgs.system}.rea
     inputs.luke-pkgs.packages.${pkgs.system}.terminal_grotesque
   ];
 }
@@ -48,7 +50,12 @@ Add this flake to your inputs:
 
 ### Home Manager modules
 
-The [Delta module](docs/DELTA.md) manages shared skills and instructions; install the app separately.
+The [Delta module](docs/DELTA.md) manages shared skills, CLI tools, and instructions; install the app separately.
+
+The four agent modules share an [MCP catalogue](docs/AGENT-MCP.md), including REA
+by default. Configure servers once through `programs.agent-mcp.servers`. Pi,
+Claude Code, and Autolith receive native configuration. Delta gets CLI tools and
+a manual setup guide because it supports only remote HTTPS MCP.
 
 Import all modules at once:
 
@@ -62,7 +69,7 @@ Import all modules at once:
   programs.claude-code.enable = true; # Reuses the shared agent skills and context
   programs.claude-desktop.enable = true; # Linux only
   programs.leetgpu.enable = true;
-  programs.zed-delta.skills.enable = true; # Shared skills only; does not install Delta
+  programs.zed-delta.skills.enable = true; # Shared skills/tools; does not install Delta
   programs.zed-delta.context.enable = true; # Shared personal AGENTS.md instructions
 
   programs.pi = {
